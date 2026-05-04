@@ -4,12 +4,51 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <title>Armaan's Space Blaster</title>
+    <title>Armaan's Arcade</title>
   </head>
   <body>
-    <main id="app">
-      <div id="game"></div>
+    <main class="arcade" aria-labelledby="arcade-title">
+      <section class="hero">
+        <div class="hero-copy">
+          <h1 id="arcade-title">Armaan's Arcade</h1>
+          <p class="tagline">Two worlds are ready: blast through deep space or race through the candy garden.</p>
+        </div>
+
+        <nav class="game-grid" aria-label="Game launcher">
+          <a class="game-card space-card" href="/space.html" aria-label="Play Space Blaster">
+            <span class="card-media" aria-hidden="true">
+              <img class="space-bg" src="/assets/space-background.png" alt="" />
+              <img class="ship-preview" src="/assets/player-ship.png" alt="" />
+              <img class="asteroid asteroid-a" src="/assets/asteroid-large.png" alt="" />
+              <img class="asteroid asteroid-b" src="/assets/asteroid-large.png" alt="" />
+            </span>
+            <span class="card-content">
+              <span class="card-title">Space Blaster</span>
+              <span class="card-copy">Dodge asteroids, collect power-ups, and take down animated boss ships.</span>
+              <span class="play-button"><span class="play-icon" aria-hidden="true"></span>Play</span>
+            </span>
+          </a>
+
+          <a class="game-card snake-card" href="/snake/index.html" aria-label="Play Snake Garden">
+            <span class="card-media" aria-hidden="true">
+              <img class="snake-bg" src="/snake/assets/concept-snake-game.png" alt="" />
+              <img class="snake-sheet" src="/snake/assets/sprite-sheet.png" alt="" />
+            </span>
+            <span class="card-content">
+              <span class="card-title">Snake Garden</span>
+              <span class="card-copy">Grow the snake, grab fruit, and weave through a bright arcade garden.</span>
+              <span class="play-button"><span class="play-icon" aria-hidden="true"></span>Play</span>
+            </span>
+          </a>
+        </nav>
+
+        <div class="status-strip" aria-label="Arcade status">
+          <span>Desktop ready</span>
+          <span>Keyboard friendly</span>
+          <span>Mobile playable</span>
+        </div>
+      </section>
     </main>
-    <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/landing.js"></script>
   </body>
 </html>
