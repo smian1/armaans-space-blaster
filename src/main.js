@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import "./styles.css";
 
-const GAME_WIDTH = 960;
+const GAME_WIDTH = 1280;
 const GAME_HEIGHT = 720;
 
 const ASSETS = {
@@ -12,6 +12,11 @@ const ASSETS = {
   enemyRaider: "/assets/enemy-raider.png",
   enemyAlien: "/assets/enemy-alien.png",
   enemyCruiser: "/assets/enemy-cruiser.png",
+  bossCrimsonCommand: "/assets/boss-crimson-command.png",
+  bossHiveQueen: "/assets/boss-hive-queen.png",
+  bossCrystalWarden: "/assets/boss-crystal-warden.png",
+  bossIronDreadnought: "/assets/boss-iron-dreadnought.png",
+  bossVoidMothership: "/assets/boss-void-mothership.png",
   laser: "/assets/laser-bolt.png",
   enemyProjectiles: "/assets/enemy-projectiles.png",
   explosion: "/assets/explosion-sheet.png",
@@ -82,6 +87,103 @@ const ENEMY_TYPES = [
     shotDelay: [900, 1400],
     movement: "cruiser",
     weight: 2,
+  },
+];
+
+const BOSS_TYPES = [
+  {
+    level: 1,
+    name: "Crimson Command",
+    texture: "boss-crimson-command",
+    displayWidth: 460,
+    y: 220,
+    hp: 46,
+    score: 1400,
+    fireDelay: 880,
+    moveRange: 210,
+    moveSpeed: 760,
+    damageTint: 0xffd27a,
+    damageSpots: [
+      { x: -132, y: -18, size: 38 },
+      { x: 126, y: -22, size: 38 },
+      { x: 0, y: 60, size: 44 },
+    ],
+  },
+  {
+    level: 2,
+    name: "Nebula Hive Queen",
+    texture: "boss-hive-queen",
+    displayWidth: 390,
+    y: 224,
+    hp: 58,
+    score: 1900,
+    fireDelay: 760,
+    moveRange: 235,
+    moveSpeed: 910,
+    damageTint: 0xcfff6d,
+    damageSpots: [
+      { x: -92, y: -44, size: 36 },
+      { x: 100, y: 24, size: 38 },
+      { x: -18, y: 92, size: 42 },
+    ],
+  },
+  {
+    level: 3,
+    name: "Crystal Star Warden",
+    texture: "boss-crystal-warden",
+    displayWidth: 430,
+    y: 222,
+    hp: 74,
+    score: 2500,
+    fireDelay: 690,
+    moveRange: 250,
+    moveSpeed: 840,
+    damageTint: 0xff83ff,
+    damageSpots: [
+      { x: -120, y: 18, size: 36 },
+      { x: 116, y: 12, size: 36 },
+      { x: 0, y: -62, size: 44 },
+      { x: 0, y: 108, size: 42 },
+    ],
+  },
+  {
+    level: 4,
+    name: "Iron Eclipse Dreadnought",
+    texture: "boss-iron-dreadnought",
+    displayWidth: 430,
+    y: 226,
+    hp: 94,
+    score: 3300,
+    fireDelay: 640,
+    moveRange: 270,
+    moveSpeed: 1020,
+    damageTint: 0xff9852,
+    damageSpots: [
+      { x: -126, y: -10, size: 40 },
+      { x: 136, y: -14, size: 40 },
+      { x: -58, y: 86, size: 42 },
+      { x: 62, y: 74, size: 42 },
+    ],
+  },
+  {
+    level: 5,
+    name: "Void Mothership",
+    texture: "boss-void-mothership",
+    displayWidth: 640,
+    y: 198,
+    hp: 122,
+    score: 4600,
+    fireDelay: 560,
+    moveRange: 230,
+    moveSpeed: 960,
+    damageTint: 0xb482ff,
+    damageSpots: [
+      { x: -190, y: -28, size: 42 },
+      { x: 188, y: -30, size: 42 },
+      { x: -78, y: 54, size: 38 },
+      { x: 92, y: 58, size: 38 },
+      { x: 0, y: -10, size: 50 },
+    ],
   },
 ];
 
@@ -201,6 +303,11 @@ class SpaceBlasterScene extends Phaser.Scene {
     this.load.image("enemy-raider", ASSETS.enemyRaider);
     this.load.image("enemy-alien", ASSETS.enemyAlien);
     this.load.image("enemy-cruiser", ASSETS.enemyCruiser);
+    this.load.image("boss-crimson-command", ASSETS.bossCrimsonCommand);
+    this.load.image("boss-hive-queen", ASSETS.bossHiveQueen);
+    this.load.image("boss-crystal-warden", ASSETS.bossCrystalWarden);
+    this.load.image("boss-iron-dreadnought", ASSETS.bossIronDreadnought);
+    this.load.image("boss-void-mothership", ASSETS.bossVoidMothership);
     this.load.image("laser-bolt", ASSETS.laser);
     this.load.spritesheet("enemy-projectiles", ASSETS.enemyProjectiles, { frameWidth: 256, frameHeight: 256 });
     this.load.spritesheet("explosion", ASSETS.explosion, { frameWidth: 256, frameHeight: 256 });
@@ -212,6 +319,8 @@ class SpaceBlasterScene extends Phaser.Scene {
     this.score = 0;
     this.level = 1;
     this.lives = 3;
+    this.maxHull = 100;
+    this.hull = this.maxHull;
     this.gameStarted = false;
     this.gameOver = false;
     this.nextShotAt = 0;
@@ -223,6 +332,10 @@ class SpaceBlasterScene extends Phaser.Scene {
     this.waveRemaining = 0;
     this.enemyRemaining = 0;
     this.levelTransitioning = false;
+    this.bossPhaseStarted = false;
+    this.bossActive = false;
+    this.currentBoss = null;
+    this.bossDamageMarks = [];
 
     this.buildWorld();
     this.buildPlayer();
@@ -306,12 +419,15 @@ class SpaceBlasterScene extends Phaser.Scene {
     this.enemyBullets = this.physics.add.group({ allowGravity: false });
     this.asteroids = this.physics.add.group({ allowGravity: false });
     this.enemies = this.physics.add.group({ allowGravity: false });
+    this.bosses = this.physics.add.group({ allowGravity: false });
     this.powerups = this.physics.add.group({ allowGravity: false });
 
     this.physics.add.overlap(this.bullets, this.asteroids, this.bulletHitsAsteroid, null, this);
     this.physics.add.overlap(this.bullets, this.enemies, this.bulletHitsEnemy, null, this);
+    this.physics.add.overlap(this.bullets, this.bosses, this.bulletHitsBoss, null, this);
     this.physics.add.overlap(this.player, this.asteroids, this.playerHitsHazard, null, this);
     this.physics.add.overlap(this.player, this.enemies, this.playerHitsHazard, null, this);
+    this.physics.add.overlap(this.player, this.bosses, this.playerHitsBoss, null, this);
     this.physics.add.overlap(this.player, this.enemyBullets, this.playerHitsHazard, null, this);
     this.physics.add.overlap(this.player, this.powerups, this.collectPowerup, null, this);
   }
@@ -329,8 +445,18 @@ class SpaceBlasterScene extends Phaser.Scene {
     this.scoreText = this.add.text(18, 16, "SCORE 0", textStyle).setDepth(50);
     this.levelText = this.add.text(GAME_WIDTH / 2, 16, "LEVEL 1", textStyle).setOrigin(0.5, 0).setDepth(50);
     this.livesText = this.add.text(GAME_WIDTH - 18, 16, "LIVES 3", textStyle).setOrigin(1, 0).setDepth(50);
+    this.hullText = this.add
+      .text(18, 45, "HULL 100%", {
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "14px",
+        fontStyle: "900",
+        color: "#8fffea",
+        stroke: "#061224",
+        strokeThickness: 3,
+      })
+      .setDepth(50);
     this.powerText = this.add
-      .text(18, 48, "", {
+      .text(18, 68, "", {
         fontFamily: "Inter, system-ui, sans-serif",
         fontSize: "13px",
         fontStyle: "800",
@@ -351,6 +477,32 @@ class SpaceBlasterScene extends Phaser.Scene {
       })
       .setOrigin(1, 0)
       .setDepth(50);
+
+    this.bossHud = this.add.container(GAME_WIDTH / 2, 64).setDepth(55).setVisible(false);
+    this.bossNameText = this.add
+      .text(0, -26, "", {
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "18px",
+        fontStyle: "900",
+        color: "#fff5ec",
+        stroke: "#061224",
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5);
+    this.bossBarBack = this.add.rectangle(0, 0, 560, 18, 0x061224, 0.86);
+    this.bossBarBack.setStrokeStyle(2, 0x80eaff, 0.42);
+    this.bossBarFill = this.add.rectangle(-278, 0, 556, 14, 0xff4d4d, 0.96).setOrigin(0, 0.5);
+    this.bossHpText = this.add
+      .text(0, 24, "", {
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "12px",
+        fontStyle: "900",
+        color: "#aeeeff",
+        stroke: "#061224",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5);
+    this.bossHud.add([this.bossNameText, this.bossBarBack, this.bossBarFill, this.bossHpText]);
   }
 
   buildAnimations() {
@@ -424,7 +576,7 @@ class SpaceBlasterScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     const body = this.add
-      .text(0, 30, "WASD / Arrows to fly\nSpace / click / touch to fire\nBreak asteroids, dodge aliens, grab powerups", {
+      .text(0, 30, "WASD / Arrows to fly\nSpace / click / touch to fire\nBreak asteroids, dodge aliens, defeat bosses", {
         fontFamily: "Inter, system-ui, sans-serif",
         fontSize: "18px",
         fontStyle: "700",
@@ -470,8 +622,13 @@ class SpaceBlasterScene extends Phaser.Scene {
 
   startLevel() {
     this.levelTransitioning = true;
-    this.waveRemaining = 10 + this.level * 5;
-    this.enemyRemaining = 2 + Math.floor(this.level * 1.25);
+    this.bossPhaseStarted = false;
+    this.bossActive = false;
+    this.currentBoss = null;
+    this.clearBossDamageMarks();
+    this.hideBossHud();
+    this.waveRemaining = 7 + this.level * 3;
+    this.enemyRemaining = 2 + Math.floor(this.level * 1.05);
     this.updateHud();
 
     const banner = this.add
@@ -511,7 +668,7 @@ class SpaceBlasterScene extends Phaser.Scene {
       repeat: this.waveRemaining - 1,
       callback: () => {
         if (this.gameOver || !this.gameStarted) return;
-        const asteroidSize = this.level >= 2 && Phaser.Math.Between(0, 100) < 24 ? "giant" : "large";
+        const asteroidSize = this.level >= 2 && Phaser.Math.Between(0, 100) < 18 ? "giant" : "large";
         this.spawnAsteroid(asteroidSize);
         this.waveRemaining -= 1;
       },
@@ -535,10 +692,10 @@ class SpaceBlasterScene extends Phaser.Scene {
 
   spawnAsteroid(sizeKey, x = Phaser.Math.Between(42, GAME_WIDTH - 42), y = -80, velocityOverride = null) {
     const sizes = {
-      giant: { display: Phaser.Math.Between(148, 188), hp: 5, score: 130, next: "large" },
-      large: { display: Phaser.Math.Between(92, 124), hp: 3, score: 80, next: "medium" },
-      medium: { display: Phaser.Math.Between(60, 82), hp: 2, score: 45, next: "small" },
-      small: { display: Phaser.Math.Between(34, 50), hp: 1, score: 25, next: null },
+      giant: { display: Phaser.Math.Between(148, 188), hp: 5, score: 130, next: "large", damage: 42 },
+      large: { display: Phaser.Math.Between(92, 124), hp: 3, score: 80, next: "medium", damage: 30 },
+      medium: { display: Phaser.Math.Between(60, 82), hp: 2, score: 45, next: "small", damage: 22 },
+      small: { display: Phaser.Math.Between(34, 50), hp: 1, score: 25, next: null, damage: 14 },
     };
     const config = sizes[sizeKey];
     const asteroid = this.asteroids.create(x, y, "asteroid-large");
@@ -548,6 +705,8 @@ class SpaceBlasterScene extends Phaser.Scene {
     asteroid.setData("hp", config.hp);
     asteroid.setData("score", config.score);
     asteroid.setData("next", config.next);
+    asteroid.setData("damage", config.damage);
+    asteroid.setData("impactScale", config.display / 170);
     asteroid.setData("spin", Phaser.Math.FloatBetween(-1.8, 1.8));
     const radius = Math.min(asteroid.width, asteroid.height) * 0.35;
     asteroid.body.setCircle(radius, (asteroid.width - radius * 2) / 2, (asteroid.height - radius * 2) / 2);
@@ -575,6 +734,8 @@ class SpaceBlasterScene extends Phaser.Scene {
     enemy.setData("movement", type.movement);
     enemy.setData("hp", type.hp + Math.floor(this.level / 2));
     enemy.setData("score", type.score + this.level * 18);
+    enemy.setData("damage", type.key === "cruiser" ? 42 : 28);
+    enemy.setData("impactScale", type.key === "cruiser" ? 0.82 : 0.6);
     enemy.setData("baseX", enemy.x);
     enemy.setData("phase", Phaser.Math.FloatBetween(0, Math.PI * 2));
     enemy.setData("shotDelay", type.shotDelay);
@@ -592,9 +753,12 @@ class SpaceBlasterScene extends Phaser.Scene {
       return;
     }
 
-    this.handlePlayerMovement(time);
-    this.handlePlayerShooting(time);
+    if (this.player.visible) {
+      this.handlePlayerMovement(time);
+      this.handlePlayerShooting(time);
+    }
     this.updateEnemies(time);
+    this.updateBoss(time);
     this.updatePowerups();
     this.recycleOffscreen();
     this.checkLevelComplete();
@@ -738,28 +902,30 @@ class SpaceBlasterScene extends Phaser.Scene {
     const speed = 245 + this.level * 10;
 
     if (weapon === "shard") {
-      this.spawnEnemyProjectile(enemy.x, enemy.y + 40, 1, 0, speed + 70, 34);
+      this.spawnEnemyProjectile(enemy.x, enemy.y + 40, 1, 0, speed + 70, 34, 18);
     } else if (weapon === "spray") {
-      [-95, 0, 95].forEach((vx) => this.spawnEnemyProjectile(enemy.x, enemy.y + 36, 3, vx, speed, 31));
+      [-95, 0, 95].forEach((vx) => this.spawnEnemyProjectile(enemy.x, enemy.y + 36, 3, vx, speed, 31, 16));
     } else if (weapon === "heavy") {
-      this.spawnEnemyProjectile(enemy.x - 48, enemy.y + 62, 0, -45, speed + 5, 30);
-      this.spawnEnemyProjectile(enemy.x + 48, enemy.y + 62, 0, 45, speed + 5, 30);
+      this.spawnEnemyProjectile(enemy.x - 48, enemy.y + 62, 0, -45, speed + 5, 30, 18);
+      this.spawnEnemyProjectile(enemy.x + 48, enemy.y + 62, 0, 45, speed + 5, 30, 18);
       this.time.delayedCall(160, () => {
         if (enemy.active) {
-          this.spawnEnemyProjectile(enemy.x, enemy.y + 72, 2, 0, speed + 92, 46);
+          this.spawnEnemyProjectile(enemy.x, enemy.y + 72, 2, 0, speed + 92, 46, 28);
         }
       });
     } else {
-      this.spawnEnemyProjectile(enemy.x, enemy.y + 38, 0, Phaser.Math.Between(-28, 28), speed, 30);
+      this.spawnEnemyProjectile(enemy.x, enemy.y + 38, 0, Phaser.Math.Between(-28, 28), speed, 30, 16);
     }
 
     this.sfx.enemyShoot();
   }
 
-  spawnEnemyProjectile(x, y, frame, vx, vy, displaySize) {
+  spawnEnemyProjectile(x, y, frame, vx, vy, displaySize, damage = 16) {
     const bullet = this.enemyBullets.create(x, y, "enemy-projectiles", frame);
     bullet.setDepth(15);
     bullet.setScale(displaySize / bullet.width);
+    bullet.setData("damage", damage);
+    bullet.setData("impactScale", Phaser.Math.Clamp(displaySize / 70, 0.36, 0.86));
     const radius = bullet.width * 0.36;
     bullet.body.setCircle(radius, (bullet.width - radius * 2) / 2, (bullet.height - radius * 2) / 2);
     bullet.body.setVelocity(vx, vy);
@@ -770,6 +936,153 @@ class SpaceBlasterScene extends Phaser.Scene {
       bullet.setAngle(Phaser.Math.RadToDeg(angle - Math.PI / 2));
     }
     return bullet;
+  }
+
+  getBossTypeForLevel() {
+    return BOSS_TYPES.find((boss) => boss.level === this.level);
+  }
+
+  startBossPhase() {
+    const bossType = this.getBossTypeForLevel();
+    if (!bossType || this.bossPhaseStarted) return;
+
+    this.bossPhaseStarted = true;
+    this.levelTransitioning = true;
+    this.asteroids.clear(true, true);
+    this.enemies.clear(true, true);
+    this.enemyBullets.clear(true, true);
+    this.powerups.clear(true, true);
+
+    const banner = this.add
+      .text(GAME_WIDTH / 2, 158, `BOSS: ${bossType.name.toUpperCase()}`, {
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "32px",
+        fontStyle: "900",
+        color: "#fff8ec",
+        stroke: "#120816",
+        strokeThickness: 8,
+      })
+      .setOrigin(0.5)
+      .setDepth(82);
+
+    this.tweens.add({
+      targets: banner,
+      scale: 1.08,
+      alpha: 0,
+      duration: 1300,
+      ease: "Cubic.easeOut",
+      onComplete: () => banner.destroy(),
+    });
+
+    this.cameras.main.shake(240, 0.005);
+    this.sfx.level();
+    this.time.delayedCall(760, () => {
+      if (this.gameOver || !this.gameStarted) return;
+      this.spawnBoss(bossType);
+      this.levelTransitioning = false;
+    });
+  }
+
+  spawnBoss(bossType) {
+    const boss = this.bosses.create(GAME_WIDTH / 2, -220, bossType.texture);
+    boss.setDepth(32);
+    boss.setScale(bossType.displayWidth / boss.width);
+    boss.setData("config", bossType);
+    boss.setData("hp", bossType.hp);
+    boss.setData("maxHp", bossType.hp);
+    boss.setData("phase", Phaser.Math.FloatBetween(0, Math.PI * 2));
+    boss.setData("nextShot", this.time.now + 850);
+    boss.setData("patternIndex", 0);
+    boss.setData("damageStage", 0);
+    boss.setData("damage", 40);
+    boss.setImmovable(true);
+    boss.body.setSize(boss.width * 0.62, boss.height * 0.54, true);
+    boss.body.setVelocity(0, 0);
+
+    this.currentBoss = boss;
+    this.bossActive = true;
+    this.showBossHud(bossType);
+    this.updateBossHud(boss);
+
+    this.tweens.add({
+      targets: boss,
+      y: bossType.y,
+      duration: 950,
+      ease: "Cubic.easeOut",
+    });
+  }
+
+  updateBoss(time) {
+    const boss = this.currentBoss;
+    if (!boss?.active || !this.bossActive) return;
+
+    const config = boss.getData("config");
+    const phase = boss.getData("phase");
+    boss.x = Phaser.Math.Clamp(
+      GAME_WIDTH / 2 + Math.sin(time / config.moveSpeed + phase) * config.moveRange,
+      config.displayWidth / 2 + 34,
+      GAME_WIDTH - config.displayWidth / 2 - 34,
+    );
+    boss.setAngle(Math.sin(time / (config.moveSpeed * 1.2) + phase) * 2.4);
+    this.syncBossDamageMarks(boss);
+
+    if (boss.y < config.y - 18 || time < boss.getData("nextShot")) return;
+
+    this.fireBossWeapon(boss);
+    boss.setData("nextShot", time + config.fireDelay);
+  }
+
+  fireBossWeapon(boss) {
+    const config = boss.getData("config");
+    const patternIndex = boss.getData("patternIndex");
+    const speed = 260 + this.level * 12;
+    const centerAngle = Phaser.Math.Angle.Between(boss.x, boss.y, this.player.x, this.player.y);
+    const down = Math.PI / 2;
+
+    boss.setData("patternIndex", patternIndex + 1);
+
+    if (config.level === 1) {
+      [-92, 92].forEach((offset) => this.spawnEnemyProjectile(boss.x + offset, boss.y + 84, 0, offset * 0.18, speed, 34, 18));
+      this.spawnBossProjectileFromAngle(boss.x, boss.y + 110, 1, centerAngle, speed + 90, 38, 22);
+    } else if (config.level === 2) {
+      [-0.5, -0.25, 0, 0.25, 0.5].forEach((spread) => {
+        this.spawnBossProjectileFromAngle(boss.x, boss.y + 108, 3, down + spread, speed + 30, 34, 18);
+      });
+      if (patternIndex % 2 === 0) {
+        this.spawnBossProjectileFromAngle(boss.x - 122, boss.y + 72, 3, centerAngle - 0.1, speed + 60, 38, 20);
+        this.spawnBossProjectileFromAngle(boss.x + 122, boss.y + 72, 3, centerAngle + 0.1, speed + 60, 38, 20);
+      }
+    } else if (config.level === 3) {
+      [-0.62, -0.38, -0.14, 0.14, 0.38, 0.62].forEach((spread) => {
+        this.spawnBossProjectileFromAngle(boss.x, boss.y + 120, 1, down + spread, speed + 55, 36, 20);
+      });
+      this.spawnBossProjectileFromAngle(boss.x, boss.y + 92, 2, centerAngle, speed + 115, 44, 28);
+    } else if (config.level === 4) {
+      [-176, -92, 92, 176].forEach((offset) => {
+        this.spawnEnemyProjectile(boss.x + offset, boss.y + 96, 2, offset * 0.14, speed + 110, 48, 30);
+      });
+      if (patternIndex % 2 === 1) {
+        [-0.28, 0, 0.28].forEach((spread) => {
+          this.spawnBossProjectileFromAngle(boss.x, boss.y + 130, 0, centerAngle + spread, speed + 45, 36, 20);
+        });
+      }
+    } else {
+      const wideFan = patternIndex % 2 === 0;
+      const spreads = wideFan ? [-0.78, -0.52, -0.26, 0, 0.26, 0.52, 0.78] : [-0.34, -0.16, 0.16, 0.34];
+      spreads.forEach((spread, index) => {
+        this.spawnBossProjectileFromAngle(boss.x, boss.y + 96, index % 2 ? 1 : 0, down + spread, speed + 50, 36, 22);
+      });
+      this.spawnBossProjectileFromAngle(boss.x - 170, boss.y + 62, 3, centerAngle - 0.06, speed + 75, 38, 22);
+      this.spawnBossProjectileFromAngle(boss.x + 170, boss.y + 62, 3, centerAngle + 0.06, speed + 75, 38, 22);
+    }
+
+    this.sfx.enemyShoot();
+  }
+
+  spawnBossProjectileFromAngle(x, y, frame, angle, speed, displaySize, damage) {
+    const vx = Math.cos(angle) * speed;
+    const vy = Math.sin(angle) * speed;
+    return this.spawnEnemyProjectile(x, y, frame, vx, vy, displaySize, damage);
   }
 
   bulletHitsAsteroid(bullet, asteroid) {
@@ -799,8 +1112,9 @@ class SpaceBlasterScene extends Phaser.Scene {
     this.score += score;
     this.createExplosion(x, y, display / 120);
 
-    if (nextSize) {
-      for (let i = 0; i < 2; i += 1) {
+    if (nextSize && (nextSize !== "small" || Phaser.Math.Between(0, 100) < 72)) {
+      const splitCount = nextSize === "small" ? 1 : 2;
+      for (let i = 0; i < splitCount; i += 1) {
         this.spawnAsteroid(nextSize, x + Phaser.Math.Between(-18, 18), y, {
           x: Phaser.Math.Between(-105, 105),
           y: Phaser.Math.Between(115, 205),
@@ -831,8 +1145,168 @@ class SpaceBlasterScene extends Phaser.Scene {
     enemy.destroy();
   }
 
+  bulletHitsBoss(bullet, boss) {
+    if (!boss.active || boss.getData("defeated")) return;
+
+    const damage = bullet.getData("damage") || 1;
+    const hitX = bullet.x;
+    const hitY = bullet.y;
+    bullet.destroy();
+
+    const hp = Math.max(0, boss.getData("hp") - damage);
+    boss.setData("hp", hp);
+    this.flashSprite(boss, boss.getData("config").damageTint);
+    this.createBossHitSparks(hitX, hitY, damage > 1 ? 18 : 10);
+    this.refreshBossDamage(boss);
+    this.updateBossHud(boss);
+
+    if (hp <= 0) {
+      this.defeatBoss(boss);
+    } else {
+      this.sfx.hit();
+    }
+  }
+
+  createBossHitSparks(x, y, count) {
+    const sparks = this.add.particles(x, y, "spark", {
+      lifespan: { min: 160, max: 330 },
+      speed: { min: 55, max: 190 },
+      scale: { start: 0.28, end: 0 },
+      alpha: { start: 0.9, end: 0 },
+      tint: [0x8fffea, 0xffd166, 0xff6848],
+      blendMode: "ADD",
+      emitting: false,
+    });
+    sparks.explode(count);
+    this.time.delayedCall(420, () => sparks.destroy());
+  }
+
+  refreshBossDamage(boss) {
+    const hp = boss.getData("hp");
+    const maxHp = boss.getData("maxHp");
+    const config = boss.getData("config");
+    const ratio = hp / maxHp;
+    const targetStage = Math.min(config.damageSpots.length, Math.floor((1 - ratio) * (config.damageSpots.length + 1)));
+    const currentStage = boss.getData("damageStage");
+
+    for (let stage = currentStage + 1; stage <= targetStage; stage += 1) {
+      this.addBossDamageMark(boss, stage);
+    }
+
+    boss.setData("damageStage", Math.max(currentStage, targetStage));
+  }
+
+  addBossDamageMark(boss, stage) {
+    const config = boss.getData("config");
+    const spot = config.damageSpots[(stage - 1) % config.damageSpots.length];
+    const mark = this.add.container(boss.x + spot.x, boss.y + spot.y).setDepth(36);
+    const scorch = this.add.ellipse(0, 0, spot.size * 1.38, spot.size, 0x08090d, 0.78);
+    scorch.setStrokeStyle(2, 0xff642e, 0.62);
+    const ember = this.add.circle(spot.size * 0.18, -spot.size * 0.08, spot.size * 0.22, 0xff7a1d, 0.78);
+    const crackA = this.add.line(0, 0, -spot.size * 0.34, -spot.size * 0.16, spot.size * 0.26, spot.size * 0.2, 0xffe29a, 0.7);
+    const crackB = this.add.line(0, 0, -spot.size * 0.18, spot.size * 0.22, spot.size * 0.18, -spot.size * 0.24, 0xff5b38, 0.72);
+    mark.add([scorch, ember, crackA, crackB]);
+    mark.setRotation(Phaser.Math.FloatBetween(-0.4, 0.4));
+    mark.setScale(0.2);
+
+    this.tweens.add({
+      targets: mark,
+      scale: 1,
+      duration: 220,
+      ease: "Back.easeOut",
+    });
+    this.tweens.add({
+      targets: ember,
+      alpha: { from: 0.38, to: 0.92 },
+      scale: { from: 0.72, to: 1.18 },
+      duration: Phaser.Math.Between(260, 420),
+      repeat: -1,
+      yoyo: true,
+      ease: "Sine.easeInOut",
+    });
+
+    this.createBossHitSparks(boss.x + spot.x, boss.y + spot.y, 28);
+    this.bossDamageMarks.push({ mark, offsetX: spot.x, offsetY: spot.y });
+    this.cameras.main.shake(180, 0.006);
+  }
+
+  syncBossDamageMarks(boss) {
+    this.bossDamageMarks.forEach(({ mark, offsetX, offsetY }) => {
+      if (!mark.active) return;
+      mark.setPosition(boss.x + offsetX, boss.y + offsetY);
+      mark.setAngle(boss.angle);
+    });
+  }
+
+  clearBossDamageMarks() {
+    this.bossDamageMarks.forEach(({ mark }) => mark.destroy());
+    this.bossDamageMarks = [];
+  }
+
+  defeatBoss(boss) {
+    if (!boss.active || boss.getData("defeated")) return;
+
+    boss.setData("defeated", true);
+    this.bossActive = false;
+    this.levelTransitioning = true;
+    this.enemyBullets.clear(true, true);
+    this.score += boss.getData("config").score;
+    this.updateHud();
+
+    const blastPoints = [
+      { x: 0, y: 0, scale: 1.12 },
+      { x: -120, y: -24, scale: 0.84 },
+      { x: 126, y: -18, scale: 0.84 },
+      { x: -64, y: 82, scale: 0.72 },
+      { x: 72, y: 76, scale: 0.72 },
+    ];
+
+    blastPoints.forEach((point, index) => {
+      this.time.delayedCall(index * 130, () => {
+        if (!boss.active && index > 0) return;
+        this.createExplosion(boss.x + point.x, boss.y + point.y, point.scale);
+      });
+    });
+
+    this.cameras.main.flash(260, 255, 232, 180, false);
+    this.cameras.main.shake(860, 0.016);
+
+    this.time.delayedCall(680, () => {
+      this.clearBossDamageMarks();
+      boss.destroy();
+      this.hideBossHud();
+      this.currentBoss = null;
+      this.showBossDownBanner();
+    });
+
+    this.time.delayedCall(1780, () => this.advanceLevel(420));
+  }
+
+  showBossDownBanner() {
+    const banner = this.add
+      .text(GAME_WIDTH / 2, 150, "BOSS DESTROYED", {
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "30px",
+        fontStyle: "900",
+        color: "#fff5ec",
+        stroke: "#120816",
+        strokeThickness: 7,
+      })
+      .setOrigin(0.5)
+      .setDepth(82);
+
+    this.tweens.add({
+      targets: banner,
+      y: 118,
+      alpha: 0,
+      duration: 1200,
+      ease: "Cubic.easeOut",
+      onComplete: () => banner.destroy(),
+    });
+  }
+
   playerHitsHazard(player, hazard) {
-    if (!hazard.active || this.time.now < this.invulnerableUntil) return;
+    if (!hazard.active || !player.visible || this.time.now < this.invulnerableUntil) return;
 
     if (this.time.now < this.shieldUntil) {
       this.score += 20;
@@ -842,18 +1316,75 @@ class SpaceBlasterScene extends Phaser.Scene {
       return;
     }
 
+    const damage = hazard.getData("damage") || 24;
+    const impactScale = hazard.getData("impactScale") || 0.52;
+    const impactX = hazard.x;
+    const impactY = hazard.y;
     hazard.destroy();
+    this.damagePlayer(damage, impactX, impactY, impactScale);
+  }
+
+  playerHitsBoss(player, boss) {
+    if (!boss.active || !player.visible || this.time.now < this.invulnerableUntil) return;
+    this.damagePlayer(boss.getData("damage") || 40, player.x, player.y - 24, 0.86);
+    this.cameras.main.shake(220, 0.01);
+  }
+
+  damagePlayer(amount, impactX, impactY, impactScale = 0.52) {
+    if (this.time.now < this.invulnerableUntil || this.gameOver || !this.player.visible) return;
+
+    this.hull = Math.max(0, this.hull - amount);
+    this.updateHud();
+
+    if (this.hull > 0) {
+      this.invulnerableUntil = this.time.now + 760;
+      this.createPlayerImpact(impactX, impactY, amount, impactScale);
+      return;
+    }
+
     this.lives -= 1;
+    this.updateHud();
+    this.createShipExplosion(this.player.x, this.player.y);
 
     if (this.lives <= 0) {
-      this.createShipExplosion(player.x, player.y);
       this.endGame();
       return;
     }
 
-    this.invulnerableUntil = this.time.now + 1650;
-    this.createExplosion(player.x, player.y, 0.72);
-    this.cameras.main.shake(180, 0.009);
+    this.player.setVisible(false);
+    this.player.body.enable = false;
+    this.engineTrail.stop();
+    this.invulnerableUntil = this.time.now + 2200;
+    this.cameras.main.shake(420, 0.012);
+
+    this.time.delayedCall(950, () => {
+      if (this.gameOver) return;
+      this.hull = this.maxHull;
+      this.player.setPosition(GAME_WIDTH / 2, GAME_HEIGHT - 92);
+      this.player.body.reset(this.player.x, this.player.y);
+      this.player.body.enable = true;
+      this.player.setVisible(true);
+      this.player.setAlpha(1);
+      this.engineTrail.start();
+      this.updateHud();
+    });
+  }
+
+  createPlayerImpact(x, y, amount, scale) {
+    const sparks = this.add.particles(x, y, "spark", {
+      lifespan: { min: 180, max: 420 },
+      speed: { min: 80, max: 240 },
+      scale: { start: 0.36, end: 0 },
+      alpha: { start: 0.94, end: 0 },
+      tint: [0x7df4ff, 0xffd166, 0xff5b38],
+      blendMode: "ADD",
+      emitting: false,
+    });
+    sparks.explode(Math.round(18 + amount * 0.35));
+    this.time.delayedCall(520, () => sparks.destroy());
+    this.cameras.main.flash(90, 255, 82, 72, false);
+    this.cameras.main.shake(120, Phaser.Math.Clamp(scale * 0.006, 0.003, 0.009));
+    this.sfx.hit();
   }
 
   collectPowerup(player, powerup) {
@@ -865,9 +1396,16 @@ class SpaceBlasterScene extends Phaser.Scene {
     if (type === "shield") this.shieldUntil = this.time.now + 7200;
     if (type === "rapid") this.rapidUntil = this.time.now + 7200;
     if (type === "double") this.doubleUntil = this.time.now + 8400;
-    if (type === "repair") this.lives = Math.min(5, this.lives + 1);
+    if (type === "repair") {
+      if (this.hull < this.maxHull) {
+        this.hull = Math.min(this.maxHull, this.hull + 35);
+      } else {
+        this.lives = Math.min(5, this.lives + 1);
+      }
+    }
 
     this.score += 90;
+    this.updateHud();
     this.sfx.powerup();
     this.cameras.main.flash(120, 70, 220, 255, false);
   }
@@ -1003,23 +1541,66 @@ class SpaceBlasterScene extends Phaser.Scene {
 
   checkLevelComplete() {
     if (this.levelTransitioning || this.waveRemaining > 0 || this.enemyRemaining > 0) return;
-    if (this.asteroids.countActive(true) > 0 || this.enemies.countActive(true) > 0) return;
+    if (this.asteroids.countActive(true) > 0 || this.enemies.countActive(true) > 0 || this.bosses.countActive(true) > 0) {
+      return;
+    }
 
+    if (this.getBossTypeForLevel() && !this.bossPhaseStarted) {
+      this.startBossPhase();
+      return;
+    }
+
+    this.advanceLevel(900);
+  }
+
+  advanceLevel(delay = 900) {
     this.level += 1;
     this.levelTransitioning = true;
-    this.time.delayedCall(900, () => this.startLevel());
+    this.time.delayedCall(delay, () => this.startLevel());
   }
 
   updateHud() {
     this.scoreText.setText(`SCORE ${this.score}`);
     this.levelText.setText(`LEVEL ${this.level}`);
     this.livesText.setText(`LIVES ${this.lives}`);
+    this.hullText.setText(`HULL ${Math.ceil(this.hull)}%`);
+    this.hullText.setColor(this.hull <= 32 ? "#ff8a6d" : this.hull <= 62 ? "#ffd166" : "#8fffea");
 
     const active = [];
     if (this.time.now < this.shieldUntil) active.push("SHIELD");
     if (this.time.now < this.rapidUntil) active.push("RAPID");
     if (this.time.now < this.doubleUntil) active.push("DOUBLE");
     this.powerText.setText(active.join("  "));
+  }
+
+  showBossHud(bossType) {
+    this.bossNameText.setText(bossType.name.toUpperCase());
+    this.levelText.setVisible(false);
+    this.bossHud.setVisible(true);
+    this.bossHud.setAlpha(0);
+    this.tweens.add({
+      targets: this.bossHud,
+      alpha: 1,
+      duration: 240,
+      ease: "Sine.easeOut",
+    });
+  }
+
+  updateBossHud(boss) {
+    if (!boss?.active) return;
+    const hp = boss.getData("hp");
+    const maxHp = boss.getData("maxHp");
+    const ratio = Phaser.Math.Clamp(hp / maxHp, 0, 1);
+    const color = ratio <= 0.28 ? 0xff5a4a : ratio <= 0.55 ? 0xffb347 : 0x58f4ff;
+    this.bossBarFill.setScale(ratio, 1);
+    this.bossBarFill.setFillStyle(color, 0.96);
+    this.bossHpText.setText(`BOSS HULL ${Math.ceil(ratio * 100)}%`);
+  }
+
+  hideBossHud() {
+    if (!this.bossHud) return;
+    this.bossHud.setVisible(false);
+    this.levelText?.setVisible(true);
   }
 
   endGame() {
@@ -1087,4 +1668,18 @@ const config = {
   scene: [SpaceBlasterScene],
 };
 
-new Phaser.Game(config);
+if (import.meta.hot && window.__spaceBlasterGame) {
+  window.__spaceBlasterGame.destroy(true);
+}
+
+const game = new Phaser.Game(config);
+
+if (import.meta.hot) {
+  window.__spaceBlasterGame = game;
+  import.meta.hot.dispose(() => {
+    game.destroy(true);
+    if (window.__spaceBlasterGame === game) {
+      delete window.__spaceBlasterGame;
+    }
+  });
+}

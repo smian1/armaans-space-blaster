@@ -1,20 +1,22 @@
 # Armaan's Space Blaster
 
-A Phaser arcade space shooter with generated sprite art, asteroids, UFO enemies, powerups, explosions, screen shake, level progression, and browser-based synth sound effects.
+A Phaser arcade space shooter with generated sprite art, asteroids, UFO enemies, unique bosses, powerups, explosions, screen shake, level progression, and browser-based synth sound effects.
 
 ![Armaan's Space Blaster gameplay concept](public/assets/concepts/gameplay-concept.png)
 
 ## Features
 
-- Wide desktop arcade playfield built with Phaser
+- Wide 16:9 desktop arcade playfield built with Phaser
 - Generated spaceship, asteroid, UFO, laser, powerup, and space background art
+- Five unique level bosses with custom generated spaceship and alien sprites
+- Boss-only fight phases with boss hull bars, attack patterns, and visible battle damage
 - New enemy variations: red raiders, organic aliens, large cruisers, and classic UFOs
 - Multiple enemy weapon styles: plasma orbs, shards, missiles, and alien energy globs
 - Big slow-motion spaceship death explosion with debris, shockwave, flash, and screen shake
 - Asteroid waves that break into smaller rocks
 - Giant asteroids and larger cruiser enemies appear as levels climb
 - Shield, rapid-fire, double-shot, and repair powerups
-- Score, lives, level progression, pause, game-over, and restart flow
+- Player hull percentage, multiple lives, score, level progression, pause, game-over, and restart flow
 
 ## Sprite Pack
 
@@ -31,6 +33,16 @@ A Phaser arcade space shooter with generated sprite art, asteroids, UFO enemies,
 | Powerups | Asteroid Explosion | Ship Death Explosion |
 | --- | --- | --- |
 | <img src="public/assets/powerups-sheet.png" width="220" alt="Powerup sprite sheet"> | <img src="public/assets/explosion-sheet.png" width="220" alt="Asteroid explosion sprite sheet"> | <img src="public/assets/ship-explosion-sheet.png" width="220" alt="Ship explosion sprite sheet"> |
+
+## Level Bosses
+
+| Level 1 | Level 2 | Level 3 |
+| --- | --- | --- |
+| <img src="public/assets/boss-crimson-command.png" width="220" alt="Crimson Command boss sprite"> | <img src="public/assets/boss-hive-queen.png" width="190" alt="Nebula Hive Queen boss sprite"> | <img src="public/assets/boss-crystal-warden.png" width="210" alt="Crystal Star Warden boss sprite"> |
+
+| Level 4 | Level 5 |
+| --- | --- |
+| <img src="public/assets/boss-iron-dreadnought.png" width="210" alt="Iron Eclipse Dreadnought boss sprite"> | <img src="public/assets/boss-void-mothership.png" width="280" alt="Void Mothership boss sprite"> |
 
 ## Background Art
 
