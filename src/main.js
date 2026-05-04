@@ -3,25 +3,52 @@ import "./styles.css";
 
 const GAME_WIDTH = 1280;
 const GAME_HEIGHT = 720;
+const SHIP_FRAME_SIZE = 256;
+const SHIP_ANIM_FRAMES = 8;
+const ASTEROID_FRAME_SIZE = 256;
+const ASTEROID_ANIM_FRAMES = 8;
+const ASTEROID_VARIANTS = 4;
+const BOSS_FRAME_SIZE = 384;
+const BOSS_STAGE_FRAMES = 6;
+const BOSS_STAGE_COUNT = 6;
+const BOSS_DEATH_FRAMES = 20;
+const DEBRIS_FRAME_SIZE = 96;
 
 const ASSETS = {
   background: "/assets/space-background.png",
   player: "/assets/player-ship.png",
+  playerSheet: "/assets/animated/player-sheet.png",
   asteroid: "/assets/asteroid-large.png",
+  asteroidSheet: "/assets/animated/asteroids-animated-sheet.png",
   enemy: "/assets/enemy-ufo.png",
   enemyRaider: "/assets/enemy-raider.png",
   enemyAlien: "/assets/enemy-alien.png",
   enemyCruiser: "/assets/enemy-cruiser.png",
+  enemyUfoSheet: "/assets/animated/ufo-sheet.png",
+  enemyRaiderSheet: "/assets/animated/raider-sheet.png",
+  enemyAlienSheet: "/assets/animated/alien-sheet.png",
+  enemyCruiserSheet: "/assets/animated/cruiser-sheet.png",
   bossCrimsonCommand: "/assets/boss-crimson-command.png",
   bossHiveQueen: "/assets/boss-hive-queen.png",
   bossCrystalWarden: "/assets/boss-crystal-warden.png",
   bossIronDreadnought: "/assets/boss-iron-dreadnought.png",
   bossVoidMothership: "/assets/boss-void-mothership.png",
+  bossCrimsonCommandSheet: "/assets/animated/boss-crimson-command-sheet.png",
+  bossHiveQueenSheet: "/assets/animated/boss-hive-queen-sheet.png",
+  bossCrystalWardenSheet: "/assets/animated/boss-crystal-warden-sheet.png",
+  bossIronDreadnoughtSheet: "/assets/animated/boss-iron-dreadnought-sheet.png",
+  bossVoidMothershipSheet: "/assets/animated/boss-void-mothership-sheet.png",
+  bossCrimsonCommandDeath: "/assets/animated/boss-crimson-command-death-sheet.png",
+  bossHiveQueenDeath: "/assets/animated/boss-hive-queen-death-sheet.png",
+  bossCrystalWardenDeath: "/assets/animated/boss-crystal-warden-death-sheet.png",
+  bossIronDreadnoughtDeath: "/assets/animated/boss-iron-dreadnought-death-sheet.png",
+  bossVoidMothershipDeath: "/assets/animated/boss-void-mothership-death-sheet.png",
   laser: "/assets/laser-bolt.png",
   enemyProjectiles: "/assets/enemy-projectiles.png",
   explosion: "/assets/explosion-sheet.png",
   shipExplosion: "/assets/ship-explosion-sheet.png",
   powerups: "/assets/powerups-sheet.png",
+  debris: "/assets/animated/ship-debris-sheet.png",
 };
 
 const POWERUPS = [
@@ -34,11 +61,13 @@ const POWERUPS = [
 const POWERUP_SIZE = 46;
 const POWERUP_PICKUP_RADIUS = 58;
 const POWERUP_MAGNET_RADIUS = 132;
+const ASTEROID_ACTIVE_CAP = 5;
 
 const ENEMY_TYPES = [
   {
     key: "ufo",
     texture: "enemy-ufo",
+    sheet: "enemy-ufo-sheet",
     unlockLevel: 1,
     display: 112,
     hp: 3,
@@ -52,6 +81,7 @@ const ENEMY_TYPES = [
   {
     key: "raider",
     texture: "enemy-raider",
+    sheet: "enemy-raider-sheet",
     unlockLevel: 1,
     display: 104,
     hp: 2,
@@ -65,6 +95,7 @@ const ENEMY_TYPES = [
   {
     key: "alien",
     texture: "enemy-alien",
+    sheet: "enemy-alien-sheet",
     unlockLevel: 1,
     display: 96,
     hp: 2,
@@ -78,6 +109,7 @@ const ENEMY_TYPES = [
   {
     key: "cruiser",
     texture: "enemy-cruiser",
+    sheet: "enemy-cruiser-sheet",
     unlockLevel: 2,
     display: 172,
     hp: 8,
@@ -92,9 +124,12 @@ const ENEMY_TYPES = [
 
 const BOSS_TYPES = [
   {
+    key: "crimson-command",
     level: 1,
     name: "Crimson Command",
     texture: "boss-crimson-command",
+    sheet: "boss-crimson-command-sheet",
+    deathSheet: "boss-crimson-command-death",
     displayWidth: 460,
     y: 220,
     hp: 46,
@@ -110,9 +145,12 @@ const BOSS_TYPES = [
     ],
   },
   {
+    key: "hive-queen",
     level: 2,
     name: "Nebula Hive Queen",
     texture: "boss-hive-queen",
+    sheet: "boss-hive-queen-sheet",
+    deathSheet: "boss-hive-queen-death",
     displayWidth: 390,
     y: 224,
     hp: 58,
@@ -128,9 +166,12 @@ const BOSS_TYPES = [
     ],
   },
   {
+    key: "crystal-warden",
     level: 3,
     name: "Crystal Star Warden",
     texture: "boss-crystal-warden",
+    sheet: "boss-crystal-warden-sheet",
+    deathSheet: "boss-crystal-warden-death",
     displayWidth: 430,
     y: 222,
     hp: 74,
@@ -147,9 +188,12 @@ const BOSS_TYPES = [
     ],
   },
   {
+    key: "iron-dreadnought",
     level: 4,
     name: "Iron Eclipse Dreadnought",
     texture: "boss-iron-dreadnought",
+    sheet: "boss-iron-dreadnought-sheet",
+    deathSheet: "boss-iron-dreadnought-death",
     displayWidth: 430,
     y: 226,
     hp: 94,
@@ -166,9 +210,12 @@ const BOSS_TYPES = [
     ],
   },
   {
+    key: "void-mothership",
     level: 5,
     name: "Void Mothership",
     texture: "boss-void-mothership",
+    sheet: "boss-void-mothership-sheet",
+    deathSheet: "boss-void-mothership-death",
     displayWidth: 640,
     y: 198,
     hp: 122,
@@ -298,21 +345,71 @@ class SpaceBlasterScene extends Phaser.Scene {
   preload() {
     this.load.image("space-background", ASSETS.background);
     this.load.image("player-ship", ASSETS.player);
+    this.load.spritesheet("player-ship-sheet", ASSETS.playerSheet, { frameWidth: SHIP_FRAME_SIZE, frameHeight: SHIP_FRAME_SIZE });
     this.load.image("asteroid-large", ASSETS.asteroid);
+    this.load.spritesheet("asteroids-animated", ASSETS.asteroidSheet, {
+      frameWidth: ASTEROID_FRAME_SIZE,
+      frameHeight: ASTEROID_FRAME_SIZE,
+    });
     this.load.image("enemy-ufo", ASSETS.enemy);
     this.load.image("enemy-raider", ASSETS.enemyRaider);
     this.load.image("enemy-alien", ASSETS.enemyAlien);
     this.load.image("enemy-cruiser", ASSETS.enemyCruiser);
+    this.load.spritesheet("enemy-ufo-sheet", ASSETS.enemyUfoSheet, { frameWidth: SHIP_FRAME_SIZE, frameHeight: SHIP_FRAME_SIZE });
+    this.load.spritesheet("enemy-raider-sheet", ASSETS.enemyRaiderSheet, { frameWidth: SHIP_FRAME_SIZE, frameHeight: SHIP_FRAME_SIZE });
+    this.load.spritesheet("enemy-alien-sheet", ASSETS.enemyAlienSheet, { frameWidth: SHIP_FRAME_SIZE, frameHeight: SHIP_FRAME_SIZE });
+    this.load.spritesheet("enemy-cruiser-sheet", ASSETS.enemyCruiserSheet, { frameWidth: SHIP_FRAME_SIZE, frameHeight: SHIP_FRAME_SIZE });
     this.load.image("boss-crimson-command", ASSETS.bossCrimsonCommand);
     this.load.image("boss-hive-queen", ASSETS.bossHiveQueen);
     this.load.image("boss-crystal-warden", ASSETS.bossCrystalWarden);
     this.load.image("boss-iron-dreadnought", ASSETS.bossIronDreadnought);
     this.load.image("boss-void-mothership", ASSETS.bossVoidMothership);
+    this.load.spritesheet("boss-crimson-command-sheet", ASSETS.bossCrimsonCommandSheet, {
+      frameWidth: BOSS_FRAME_SIZE,
+      frameHeight: BOSS_FRAME_SIZE,
+    });
+    this.load.spritesheet("boss-hive-queen-sheet", ASSETS.bossHiveQueenSheet, {
+      frameWidth: BOSS_FRAME_SIZE,
+      frameHeight: BOSS_FRAME_SIZE,
+    });
+    this.load.spritesheet("boss-crystal-warden-sheet", ASSETS.bossCrystalWardenSheet, {
+      frameWidth: BOSS_FRAME_SIZE,
+      frameHeight: BOSS_FRAME_SIZE,
+    });
+    this.load.spritesheet("boss-iron-dreadnought-sheet", ASSETS.bossIronDreadnoughtSheet, {
+      frameWidth: BOSS_FRAME_SIZE,
+      frameHeight: BOSS_FRAME_SIZE,
+    });
+    this.load.spritesheet("boss-void-mothership-sheet", ASSETS.bossVoidMothershipSheet, {
+      frameWidth: BOSS_FRAME_SIZE,
+      frameHeight: BOSS_FRAME_SIZE,
+    });
+    this.load.spritesheet("boss-crimson-command-death", ASSETS.bossCrimsonCommandDeath, {
+      frameWidth: BOSS_FRAME_SIZE,
+      frameHeight: BOSS_FRAME_SIZE,
+    });
+    this.load.spritesheet("boss-hive-queen-death", ASSETS.bossHiveQueenDeath, {
+      frameWidth: BOSS_FRAME_SIZE,
+      frameHeight: BOSS_FRAME_SIZE,
+    });
+    this.load.spritesheet("boss-crystal-warden-death", ASSETS.bossCrystalWardenDeath, {
+      frameWidth: BOSS_FRAME_SIZE,
+      frameHeight: BOSS_FRAME_SIZE,
+    });
+    this.load.spritesheet("boss-iron-dreadnought-death", ASSETS.bossIronDreadnoughtDeath, {
+      frameWidth: BOSS_FRAME_SIZE,
+      frameHeight: BOSS_FRAME_SIZE,
+    });
+    this.load.spritesheet("boss-void-mothership-death", ASSETS.bossVoidMothershipDeath, {
+      frameWidth: BOSS_FRAME_SIZE,
+      frameHeight: BOSS_FRAME_SIZE,
+    });
     this.load.image("laser-bolt", ASSETS.laser);
     this.load.spritesheet("enemy-projectiles", ASSETS.enemyProjectiles, { frameWidth: 256, frameHeight: 256 });
     this.load.spritesheet("explosion", ASSETS.explosion, { frameWidth: 256, frameHeight: 256 });
     this.load.spritesheet("ship-explosion", ASSETS.shipExplosion, { frameWidth: 256, frameHeight: 256 });
     this.load.spritesheet("powerups", ASSETS.powerups, { frameWidth: 256, frameHeight: 256 });
+    this.load.spritesheet("ship-debris", ASSETS.debris, { frameWidth: DEBRIS_FRAME_SIZE, frameHeight: DEBRIS_FRAME_SIZE });
   }
 
   create() {
@@ -336,12 +433,13 @@ class SpaceBlasterScene extends Phaser.Scene {
     this.bossActive = false;
     this.currentBoss = null;
     this.bossDamageMarks = [];
+    this.bossDebris = [];
 
     this.buildWorld();
+    this.buildAnimations();
     this.buildPlayer();
     this.buildGroups();
     this.buildHud();
-    this.buildAnimations();
     this.registerControls();
     this.createStartOverlay();
   }
@@ -385,9 +483,10 @@ class SpaceBlasterScene extends Phaser.Scene {
   }
 
   buildPlayer() {
-    this.player = this.physics.add.sprite(GAME_WIDTH / 2, GAME_HEIGHT - 92, "player-ship");
+    this.player = this.physics.add.sprite(GAME_WIDTH / 2, GAME_HEIGHT - 92, "player-ship-sheet", 0);
     this.player.setDepth(20);
     this.player.setScale(96 / this.player.width);
+    this.player.play("player-idle");
     this.player.body.setSize(this.player.width * 0.46, this.player.height * 0.5, true);
     this.player.body.setCollideWorldBounds(true);
     this.player.body.setDamping(true);
@@ -505,15 +604,66 @@ class SpaceBlasterScene extends Phaser.Scene {
     this.bossHud.add([this.bossNameText, this.bossBarBack, this.bossBarFill, this.bossHpText]);
   }
 
+  createAnimationOnce(config) {
+    if (!this.anims.exists(config.key)) {
+      this.anims.create(config);
+    }
+  }
+
   buildAnimations() {
-    this.anims.create({
+    this.createAnimationOnce({
+      key: "player-idle",
+      frames: this.anims.generateFrameNumbers("player-ship-sheet", { start: 0, end: SHIP_ANIM_FRAMES - 1 }),
+      frameRate: 10,
+      repeat: -1,
+    });
+
+    for (let variant = 0; variant < ASTEROID_VARIANTS; variant += 1) {
+      const start = variant * ASTEROID_ANIM_FRAMES;
+      this.createAnimationOnce({
+        key: `asteroid-spin-${variant}`,
+        frames: this.anims.generateFrameNumbers("asteroids-animated", { start, end: start + ASTEROID_ANIM_FRAMES - 1 }),
+        frameRate: 7 + variant,
+        repeat: -1,
+      });
+    }
+
+    ENEMY_TYPES.forEach((type) => {
+      this.createAnimationOnce({
+        key: `enemy-${type.key}-idle`,
+        frames: this.anims.generateFrameNumbers(type.sheet, { start: 0, end: SHIP_ANIM_FRAMES - 1 }),
+        frameRate: type.key === "cruiser" ? 7 : 9,
+        repeat: -1,
+      });
+    });
+
+    BOSS_TYPES.forEach((boss) => {
+      for (let stage = 0; stage < BOSS_STAGE_COUNT; stage += 1) {
+        const start = stage * BOSS_STAGE_FRAMES;
+        this.createAnimationOnce({
+          key: this.getBossStageAnimationKey(boss, stage),
+          frames: this.anims.generateFrameNumbers(boss.sheet, { start, end: start + BOSS_STAGE_FRAMES - 1 }),
+          frameRate: 6,
+          repeat: -1,
+        });
+      }
+
+      this.createAnimationOnce({
+        key: this.getBossDeathAnimationKey(boss),
+        frames: this.anims.generateFrameNumbers(boss.deathSheet, { start: 0, end: BOSS_DEATH_FRAMES - 1 }),
+        frameRate: 7,
+        hideOnComplete: true,
+      });
+    });
+
+    this.createAnimationOnce({
       key: "boom",
       frames: this.anims.generateFrameNumbers("explosion", { start: 0, end: 15 }),
       frameRate: 28,
       hideOnComplete: true,
     });
 
-    this.anims.create({
+    this.createAnimationOnce({
       key: "ship-boom",
       frames: this.anims.generateFrameNumbers("ship-explosion", { start: 0, end: 15 }),
       frameRate: 8,
@@ -626,8 +776,9 @@ class SpaceBlasterScene extends Phaser.Scene {
     this.bossActive = false;
     this.currentBoss = null;
     this.clearBossDamageMarks();
+    this.clearBossDebris();
     this.hideBossHud();
-    this.waveRemaining = 7 + this.level * 3;
+    this.waveRemaining = 5 + Math.ceil(this.level * 1.8);
     this.enemyRemaining = 2 + Math.floor(this.level * 1.05);
     this.updateHud();
 
@@ -661,14 +812,20 @@ class SpaceBlasterScene extends Phaser.Scene {
   }
 
   spawnAsteroidWave() {
-    const delay = Math.max(300, 860 - this.level * 48);
+    const delay = Math.max(520, 1120 - this.level * 36);
 
     this.time.addEvent({
       delay,
       repeat: this.waveRemaining - 1,
       callback: () => {
         if (this.gameOver || !this.gameStarted) return;
-        const asteroidSize = this.level >= 2 && Phaser.Math.Between(0, 100) < 18 ? "giant" : "large";
+        const activeLimit = Math.min(7, ASTEROID_ACTIVE_CAP + Math.floor(this.level / 4));
+        if (this.asteroids.countActive(true) >= activeLimit) {
+          this.waveRemaining -= 1;
+          return;
+        }
+
+        const asteroidSize = this.level >= 3 && Phaser.Math.Between(0, 100) < 9 ? "giant" : "large";
         this.spawnAsteroid(asteroidSize);
         this.waveRemaining -= 1;
       },
@@ -698,15 +855,21 @@ class SpaceBlasterScene extends Phaser.Scene {
       small: { display: Phaser.Math.Between(34, 50), hp: 1, score: 25, next: null, damage: 14 },
     };
     const config = sizes[sizeKey];
-    const asteroid = this.asteroids.create(x, y, "asteroid-large");
+    const variant = Phaser.Math.Between(0, ASTEROID_VARIANTS - 1);
+    const asteroid = this.asteroids.create(x, y, "asteroids-animated", variant * ASTEROID_ANIM_FRAMES);
     asteroid.setDepth(14);
     asteroid.setScale(config.display / Math.max(asteroid.width, asteroid.height));
+    asteroid.play(`asteroid-spin-${variant}`);
+    asteroid.anims.timeScale = Phaser.Math.FloatBetween(0.7, 1.3);
+    asteroid.setData("variant", variant);
     asteroid.setData("sizeKey", sizeKey);
     asteroid.setData("hp", config.hp);
     asteroid.setData("score", config.score);
     asteroid.setData("next", config.next);
     asteroid.setData("damage", config.damage);
     asteroid.setData("impactScale", config.display / 170);
+    asteroid.setData("baseScale", asteroid.scaleX);
+    asteroid.setData("phase", Phaser.Math.FloatBetween(0, Math.PI * 2));
     asteroid.setData("spin", Phaser.Math.FloatBetween(-1.8, 1.8));
     const radius = Math.min(asteroid.width, asteroid.height) * 0.35;
     asteroid.body.setCircle(radius, (asteroid.width - radius * 2) / 2, (asteroid.height - radius * 2) / 2);
@@ -714,7 +877,7 @@ class SpaceBlasterScene extends Phaser.Scene {
     const speedY = Phaser.Math.Between(92, 140) + this.level * 8;
     const speedX = Phaser.Math.Between(-70, 70);
     asteroid.body.setVelocity(velocityOverride?.x ?? speedX, velocityOverride?.y ?? speedY);
-    asteroid.body.setAngularVelocity(Phaser.Math.Between(-80, 80));
+    asteroid.body.setAngularVelocity(Phaser.Math.Between(-34, 34));
     return asteroid;
   }
 
@@ -726,9 +889,11 @@ class SpaceBlasterScene extends Phaser.Scene {
 
   spawnEnemy(type = this.chooseEnemyType()) {
     const margin = Math.max(74, type.display / 2 + 18);
-    const enemy = this.enemies.create(Phaser.Math.Between(margin, GAME_WIDTH - margin), -type.display, type.texture);
+    const enemy = this.enemies.create(Phaser.Math.Between(margin, GAME_WIDTH - margin), -type.display, type.sheet, 0);
     enemy.setDepth(18);
     enemy.setScale(type.display / Math.max(enemy.width, enemy.height));
+    enemy.play(`enemy-${type.key}-idle`);
+    enemy.anims.timeScale = Phaser.Math.FloatBetween(0.85, 1.18);
     enemy.setData("type", type.key);
     enemy.setData("weapon", type.weapon);
     enemy.setData("movement", type.movement);
@@ -736,6 +901,8 @@ class SpaceBlasterScene extends Phaser.Scene {
     enemy.setData("score", type.score + this.level * 18);
     enemy.setData("damage", type.key === "cruiser" ? 42 : 28);
     enemy.setData("impactScale", type.key === "cruiser" ? 0.82 : 0.6);
+    enemy.setData("baseScale", enemy.scaleX);
+    enemy.setData("hitUntil", 0);
     enemy.setData("baseX", enemy.x);
     enemy.setData("phase", Phaser.Math.FloatBetween(0, Math.PI * 2));
     enemy.setData("shotDelay", type.shotDelay);
@@ -758,6 +925,7 @@ class SpaceBlasterScene extends Phaser.Scene {
       this.handlePlayerShooting(time);
     }
     this.updateEnemies(time);
+    this.updateAsteroids(time);
     this.updateBoss(time);
     this.updatePowerups();
     this.recycleOffscreen();
@@ -889,11 +1057,28 @@ class SpaceBlasterScene extends Phaser.Scene {
         enemy.setAngle(Math.sin(time / 480 + phase) * 5);
       }
 
+      const baseScale = enemy.getData("baseScale") || enemy.scaleX;
+      const pulse = 1 + Math.sin(time / 260 + phase) * 0.018;
+      const hitBoost = time < enemy.getData("hitUntil") ? 1.08 : 1;
+      enemy.setScale(baseScale * pulse * hitBoost);
+
       if (time > enemy.getData("nextShot") && enemy.y > 70) {
         this.fireEnemyBullet(enemy);
         const delay = enemy.getData("shotDelay");
         enemy.setData("nextShot", time + Phaser.Math.Between(delay[0], delay[1]) - this.level * 24);
       }
+    });
+  }
+
+  updateAsteroids(time) {
+    this.asteroids.children.iterate((asteroid) => {
+      if (!asteroid?.active) return;
+
+      const baseScale = asteroid.getData("baseScale") || asteroid.scaleX;
+      const phase = asteroid.getData("phase") || 0;
+      const wobble = 1 + Math.sin(time / 420 + phase) * 0.02;
+      asteroid.setScale(baseScale * wobble);
+      asteroid.setAlpha(0.94 + Math.sin(time / 520 + phase) * 0.06);
     });
   }
 
@@ -942,6 +1127,22 @@ class SpaceBlasterScene extends Phaser.Scene {
     return BOSS_TYPES.find((boss) => boss.level === this.level);
   }
 
+  getBossStageAnimationKey(bossType, stage) {
+    return `boss-${bossType.key}-stage-${Phaser.Math.Clamp(stage, 0, BOSS_STAGE_COUNT - 1)}`;
+  }
+
+  getBossDeathAnimationKey(bossType) {
+    return `boss-${bossType.key}-death`;
+  }
+
+  playBossStageAnimation(boss, stage) {
+    const config = boss.getData("config");
+    const key = this.getBossStageAnimationKey(config, stage);
+    if (boss.anims.currentAnim?.key !== key) {
+      boss.play(key, true);
+    }
+  }
+
   startBossPhase() {
     const bossType = this.getBossTypeForLevel();
     if (!bossType || this.bossPhaseStarted) return;
@@ -984,9 +1185,10 @@ class SpaceBlasterScene extends Phaser.Scene {
   }
 
   spawnBoss(bossType) {
-    const boss = this.bosses.create(GAME_WIDTH / 2, -220, bossType.texture);
+    const boss = this.bosses.create(GAME_WIDTH / 2, -220, bossType.sheet, 0);
     boss.setDepth(32);
     boss.setScale(bossType.displayWidth / boss.width);
+    boss.play(this.getBossStageAnimationKey(bossType, 0));
     boss.setData("config", bossType);
     boss.setData("hp", bossType.hp);
     boss.setData("maxHp", bossType.hp);
@@ -995,6 +1197,8 @@ class SpaceBlasterScene extends Phaser.Scene {
     boss.setData("patternIndex", 0);
     boss.setData("damageStage", 0);
     boss.setData("damage", 40);
+    boss.setData("baseScale", boss.scaleX);
+    boss.setData("stressUntil", 0);
     boss.setImmovable(true);
     boss.body.setSize(boss.width * 0.62, boss.height * 0.54, true);
     boss.body.setVelocity(0, 0);
@@ -1018,12 +1222,17 @@ class SpaceBlasterScene extends Phaser.Scene {
 
     const config = boss.getData("config");
     const phase = boss.getData("phase");
+    const damageStage = boss.getData("damageStage") || 0;
+    const baseScale = boss.getData("baseScale");
+    const stress = damageStage > 0 ? 1 + Math.sin(time / 92) * damageStage * 0.0035 : 1;
+    const impactJitter = time < boss.getData("stressUntil") ? Math.sin(time / 18) * 7 : 0;
     boss.x = Phaser.Math.Clamp(
-      GAME_WIDTH / 2 + Math.sin(time / config.moveSpeed + phase) * config.moveRange,
+      GAME_WIDTH / 2 + Math.sin(time / config.moveSpeed + phase) * config.moveRange + impactJitter,
       config.displayWidth / 2 + 34,
       GAME_WIDTH - config.displayWidth / 2 - 34,
     );
-    boss.setAngle(Math.sin(time / (config.moveSpeed * 1.2) + phase) * 2.4);
+    boss.setScale(baseScale * stress);
+    boss.setAngle(Math.sin(time / (config.moveSpeed * 1.2) + phase) * (2.4 + damageStage * 0.38) + impactJitter * 0.18);
     this.syncBossDamageMarks(boss);
 
     if (boss.y < config.y - 18 || time < boss.getData("nextShot")) return;
@@ -1095,6 +1304,7 @@ class SpaceBlasterScene extends Phaser.Scene {
     const hp = asteroid.getData("hp") - amount;
     asteroid.setData("hp", hp);
     this.flashSprite(asteroid, 0xfff5ba);
+    this.createAsteroidHitDust(asteroid.x, asteroid.y, asteroid.getData("variant"), asteroid.displayWidth / 140);
 
     if (hp > 0) {
       this.sfx.hit();
@@ -1107,21 +1317,82 @@ class SpaceBlasterScene extends Phaser.Scene {
     const score = asteroid.getData("score");
     const nextSize = next;
     const display = asteroid.displayWidth;
+    const variant = asteroid.getData("variant") || 0;
     asteroid.destroy();
 
     this.score += score;
     this.createExplosion(x, y, display / 120);
+    this.spawnAsteroidFragments(x, y, display, variant);
 
-    if (nextSize && (nextSize !== "small" || Phaser.Math.Between(0, 100) < 72)) {
-      const splitCount = nextSize === "small" ? 1 : 2;
-      for (let i = 0; i < splitCount; i += 1) {
-        this.spawnAsteroid(nextSize, x + Phaser.Math.Between(-18, 18), y, {
-          x: Phaser.Math.Between(-105, 105),
-          y: Phaser.Math.Between(115, 205),
-        });
+    let didSplit = false;
+    if (nextSize) {
+      const splitChance = {
+        large: 85,
+        medium: 72,
+        small: 38,
+      }[nextSize];
+
+      if (Phaser.Math.Between(0, 100) < splitChance) {
+        didSplit = true;
+        const splitCount = nextSize === "medium" && Phaser.Math.Between(0, 100) < 30 ? 2 : 1;
+        for (let i = 0; i < splitCount; i += 1) {
+          this.spawnAsteroid(nextSize, x + Phaser.Math.Between(-18, 18), y, {
+            x: Phaser.Math.Between(-105, 105),
+            y: Phaser.Math.Between(115, 205),
+          });
+        }
       }
-    } else if (Phaser.Math.Between(0, 100) < 13) {
+    }
+
+    if (!didSplit && Phaser.Math.Between(0, 100) < 13) {
       this.spawnPowerup(x, y);
+    }
+  }
+
+  createAsteroidHitDust(x, y, variant = 0, scale = 0.7) {
+    const palette = [
+      [0xd6d2c7, 0x8b7c68, 0xffd166],
+      [0xff9a48, 0xff5b38, 0xffd166],
+      [0x76efff, 0xa9fbff, 0xffffff],
+      [0xb482ff, 0x6e5eff, 0xffd6ff],
+    ][variant % ASTEROID_VARIANTS];
+    const dust = this.add.particles(x, y, "spark", {
+      lifespan: { min: 180, max: 380 },
+      speed: { min: 38, max: 145 },
+      scale: { start: Phaser.Math.Clamp(scale * 0.22, 0.12, 0.4), end: 0 },
+      alpha: { start: 0.58, end: 0 },
+      tint: palette,
+      blendMode: "ADD",
+      emitting: false,
+    });
+    dust.explode(Phaser.Math.Clamp(Math.round(10 + scale * 12), 8, 22));
+    this.time.delayedCall(460, () => dust.destroy());
+  }
+
+  spawnAsteroidFragments(x, y, display, variant = 0) {
+    const count = Phaser.Math.Clamp(Math.round(display / 34), 3, 7);
+    for (let i = 0; i < count; i += 1) {
+      const frame = variant * ASTEROID_ANIM_FRAMES + Phaser.Math.Between(0, ASTEROID_ANIM_FRAMES - 1);
+      const fragment = this.add.sprite(x, y, "asteroids-animated", frame);
+      fragment.setDepth(19);
+      fragment.setScale((display / ASTEROID_FRAME_SIZE) * Phaser.Math.FloatBetween(0.12, 0.24));
+      fragment.play(`asteroid-spin-${variant}`);
+      fragment.anims.timeScale = Phaser.Math.FloatBetween(0.7, 1.5);
+      fragment.setAlpha(0.86);
+
+      const angle = Phaser.Math.FloatBetween(-Math.PI, 0);
+      const distance = Phaser.Math.Between(36, 108) + display * 0.26;
+      this.tweens.add({
+        targets: fragment,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance + Phaser.Math.Between(42, 128),
+        alpha: 0,
+        scale: fragment.scaleX * Phaser.Math.FloatBetween(0.42, 0.72),
+        rotation: Phaser.Math.FloatBetween(-4, 4),
+        duration: Phaser.Math.Between(760, 1260),
+        ease: "Cubic.easeOut",
+        onComplete: () => fragment.destroy(),
+      });
     }
   }
 
@@ -1130,7 +1401,9 @@ class SpaceBlasterScene extends Phaser.Scene {
     bullet.destroy();
     const hp = enemy.getData("hp") - damage;
     enemy.setData("hp", hp);
+    enemy.setData("hitUntil", this.time.now + 160);
     this.flashSprite(enemy, 0xffffff);
+    this.createEnemyHitBurst(enemy.x, enemy.y, enemy.getData("impactScale") || 0.62);
 
     if (hp > 0) {
       this.sfx.hit();
@@ -1139,10 +1412,49 @@ class SpaceBlasterScene extends Phaser.Scene {
 
     this.score += enemy.getData("score");
     this.createExplosion(enemy.x, enemy.y, enemy.getData("type") === "cruiser" ? 1.08 : 0.78);
+    this.spawnShipDebris(enemy.x, enemy.y, enemy.getData("type") === "cruiser" ? 9 : 5, enemy.displayWidth / 150);
     if (Phaser.Math.Between(0, 100) < 36) {
       this.spawnPowerup(enemy.x, enemy.y);
     }
     enemy.destroy();
+  }
+
+  createEnemyHitBurst(x, y, scale = 0.62) {
+    const sparks = this.add.particles(x, y, "spark", {
+      lifespan: { min: 140, max: 320 },
+      speed: { min: 70, max: 210 },
+      scale: { start: Phaser.Math.Clamp(scale * 0.22, 0.14, 0.36), end: 0 },
+      alpha: { start: 0.9, end: 0 },
+      tint: [0x7df4ff, 0xffd166, 0xff5b38],
+      blendMode: "ADD",
+      emitting: false,
+    });
+    sparks.explode(Phaser.Math.Clamp(Math.round(12 + scale * 16), 10, 26));
+    this.time.delayedCall(380, () => sparks.destroy());
+  }
+
+  spawnShipDebris(x, y, count = 6, scale = 0.8) {
+    for (let i = 0; i < count; i += 1) {
+      const piece = this.add.image(x + Phaser.Math.Between(-12, 12), y + Phaser.Math.Between(-12, 12), "ship-debris", Phaser.Math.Between(0, 15));
+      piece.setDepth(42);
+      piece.setScale(Phaser.Math.Clamp(scale, 0.34, 1.24) * Phaser.Math.FloatBetween(0.28, 0.58));
+      piece.setAngle(Phaser.Math.Between(0, 360));
+      piece.setTint(Phaser.Utils.Array.GetRandom([0xffffff, 0x7df4ff, 0xffb347, 0xff6a4a]));
+
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const distance = Phaser.Math.Between(70, 190) * Phaser.Math.Clamp(scale, 0.55, 1.4);
+      this.tweens.add({
+        targets: piece,
+        x: piece.x + Math.cos(angle) * distance,
+        y: piece.y + Math.sin(angle) * distance + Phaser.Math.Between(48, 142),
+        rotation: piece.rotation + Phaser.Math.FloatBetween(-6, 6),
+        alpha: 0,
+        scale: piece.scaleX * Phaser.Math.FloatBetween(0.42, 0.72),
+        duration: Phaser.Math.Between(980, 1760),
+        ease: "Cubic.easeOut",
+        onComplete: () => piece.destroy(),
+      });
+    }
   }
 
   bulletHitsBoss(bullet, boss) {
@@ -1157,6 +1469,7 @@ class SpaceBlasterScene extends Phaser.Scene {
     boss.setData("hp", hp);
     this.flashSprite(boss, boss.getData("config").damageTint);
     this.createBossHitSparks(hitX, hitY, damage > 1 ? 18 : 10);
+    this.spawnBossChipSpray(boss, hitX, hitY, damage > 1 ? 4 : 2);
     this.refreshBossDamage(boss);
     this.updateBossHud(boss);
 
@@ -1181,12 +1494,45 @@ class SpaceBlasterScene extends Phaser.Scene {
     this.time.delayedCall(420, () => sparks.destroy());
   }
 
+  spawnBossChipSpray(boss, x, y, count = 3) {
+    const config = boss.getData("config");
+
+    for (let i = 0; i < count; i += 1) {
+      const size = Phaser.Math.Between(10, 22);
+      const tint = Phaser.Utils.Array.GetRandom([0xffffff, 0xffc16a, 0x7df4ff, config.damageTint]);
+      const chip = this.add.image(
+        x + Phaser.Math.Between(-8, 8),
+        y + Phaser.Math.Between(-8, 8),
+        "ship-debris",
+        Phaser.Math.Between(0, 15),
+      );
+      chip.setDepth(39);
+      chip.setScale(size / DEBRIS_FRAME_SIZE);
+      chip.setTint(tint);
+      chip.setRotation(Phaser.Math.FloatBetween(0, Math.PI * 2));
+      if (tint !== 0xffffff) {
+        chip.setBlendMode(Phaser.BlendModes.ADD);
+      }
+      this.bossDebris.push(chip);
+
+      this.tweens.add({
+        targets: chip,
+        x: chip.x + Phaser.Math.Between(-46, 46),
+        y: chip.y + Phaser.Math.Between(34, 92),
+        rotation: chip.rotation + Phaser.Math.FloatBetween(-5.8, 5.8),
+        scale: Phaser.Math.FloatBetween(0.45, 0.78),
+        duration: Phaser.Math.Between(980, 1480),
+        ease: "Cubic.easeOut",
+      });
+      this.fadeBossDebris(chip, 1450, 760);
+    }
+  }
+
   refreshBossDamage(boss) {
     const hp = boss.getData("hp");
     const maxHp = boss.getData("maxHp");
-    const config = boss.getData("config");
     const ratio = hp / maxHp;
-    const targetStage = Math.min(config.damageSpots.length, Math.floor((1 - ratio) * (config.damageSpots.length + 1)));
+    const targetStage = Math.min(BOSS_STAGE_COUNT - 1, Math.floor((1 - ratio) * BOSS_STAGE_COUNT));
     const currentStage = boss.getData("damageStage");
 
     for (let stage = currentStage + 1; stage <= targetStage; stage += 1) {
@@ -1194,11 +1540,17 @@ class SpaceBlasterScene extends Phaser.Scene {
     }
 
     boss.setData("damageStage", Math.max(currentStage, targetStage));
+    if (targetStage > currentStage) {
+      this.playBossStageAnimation(boss, targetStage);
+      boss.setData("stressUntil", this.time.now + 420);
+    }
   }
 
   addBossDamageMark(boss, stage) {
     const config = boss.getData("config");
     const spot = config.damageSpots[(stage - 1) % config.damageSpots.length];
+    this.spawnBossBreakoff(boss, spot, stage);
+
     const mark = this.add.container(boss.x + spot.x, boss.y + spot.y).setDepth(36);
     const scorch = this.add.ellipse(0, 0, spot.size * 1.38, spot.size, 0x08090d, 0.78);
     scorch.setStrokeStyle(2, 0xff642e, 0.62);
@@ -1226,8 +1578,121 @@ class SpaceBlasterScene extends Phaser.Scene {
     });
 
     this.createBossHitSparks(boss.x + spot.x, boss.y + spot.y, 28);
-    this.bossDamageMarks.push({ mark, offsetX: spot.x, offsetY: spot.y });
+    const smoke = this.add.particles(0, 0, "spark", {
+      follow: mark,
+      lifespan: { min: 520, max: 980 },
+      speedX: { min: -18, max: 18 },
+      speedY: { min: -76, max: -24 },
+      scale: { start: spot.size / 92, end: spot.size / 40 },
+      alpha: { start: 0.22, end: 0 },
+      tint: [0x6d7786, 0xff6a2e, 0x202633],
+      frequency: Phaser.Math.Between(65, 110),
+      blendMode: "ADD",
+    });
+    smoke.setDepth(35);
+    this.bossDamageMarks.push({ mark, smoke, offsetX: spot.x, offsetY: spot.y });
     this.cameras.main.shake(180, 0.006);
+  }
+
+  spawnBossBreakoff(boss, spot, stage, finalBurst = false) {
+    const config = boss.getData("config");
+    const texture = this.textures.get(config.texture);
+    const source = texture.getSourceImage();
+    const bossScale = boss.getData("baseScale") || boss.scaleX;
+    const worldX = boss.x + spot.x;
+    const worldY = boss.y + spot.y;
+    const outwardAngle =
+      Math.abs(spot.x) + Math.abs(spot.y) < 20 ? Math.PI / 2 : Phaser.Math.Angle.Between(boss.x, boss.y, worldX, worldY);
+    const chunkCount = finalBurst ? 7 : 3 + stage;
+
+    for (let i = 0; i < chunkCount; i += 1) {
+      const cropSize = Phaser.Math.Between(44, finalBurst ? 88 : 70);
+      const sourceX = Phaser.Math.Clamp(source.width / 2 + (spot.x + Phaser.Math.Between(-spot.size, spot.size)) / bossScale, 0, source.width);
+      const sourceY = Phaser.Math.Clamp(source.height / 2 + (spot.y + Phaser.Math.Between(-spot.size, spot.size)) / bossScale, 0, source.height);
+      const cropX = Phaser.Math.Clamp(sourceX - cropSize / 2, 0, source.width - cropSize);
+      const cropY = Phaser.Math.Clamp(sourceY - cropSize / 2, 0, source.height - cropSize);
+      const frameName = `break-${config.level}-${stage}-${this.time.now}-${i}-${Phaser.Math.Between(1000, 9999)}`;
+      texture.add(frameName, 0, Math.floor(cropX), Math.floor(cropY), cropSize, cropSize);
+      const chunk = this.add.image(worldX, worldY, config.texture, frameName);
+      chunk.setDepth(38);
+      chunk.setScale(bossScale * Phaser.Math.FloatBetween(1.08, 1.45));
+      chunk.setAngle(boss.angle + Phaser.Math.Between(-28, 28));
+      chunk.setAlpha(0.98);
+      this.bossDebris.push(chunk);
+
+      const launchAngle = outwardAngle + Phaser.Math.FloatBetween(-0.82, 0.82);
+      const distance = Phaser.Math.Between(finalBurst ? 150 : 82, finalBurst ? 270 : 168);
+      const fall = Phaser.Math.Between(finalBurst ? 76 : 42, finalBurst ? 190 : 116);
+      this.tweens.add({
+        targets: chunk,
+        x: chunk.x + Math.cos(launchAngle) * distance,
+        y: chunk.y + Math.sin(launchAngle) * distance * 0.5 + fall,
+        rotation: Phaser.Math.FloatBetween(-8.2, 8.2),
+        scale: chunk.scaleX * Phaser.Math.FloatBetween(0.44, 0.72),
+        duration: Phaser.Math.Between(finalBurst ? 1800 : 1420, finalBurst ? 2600 : 2100),
+        ease: "Cubic.easeOut",
+      });
+      this.fadeBossDebris(chunk, finalBurst ? 2400 : 1900, finalBurst ? 1180 : 940);
+    }
+
+    this.spawnBossPanelShards(boss, spot, finalBurst ? 9 : 4 + stage, finalBurst);
+    this.spawnBossChipSpray(boss, worldX, worldY, finalBurst ? 18 : 8 + stage * 2);
+    this.createBossHitSparks(worldX, worldY, finalBurst ? 54 : 32);
+  }
+
+  spawnBossPanelShards(boss, spot, count, finalBurst = false) {
+    const config = boss.getData("config");
+    const worldX = boss.x + spot.x;
+    const worldY = boss.y + spot.y;
+    const outwardAngle =
+      Math.abs(spot.x) + Math.abs(spot.y) < 20 ? Math.PI / 2 : Phaser.Math.Angle.Between(boss.x, boss.y, worldX, worldY);
+    const colors = [0xbac6cf, 0xff5d3a, 0x46e7ff, 0x4a5360, config.damageTint];
+
+    for (let i = 0; i < count; i += 1) {
+      const width = Phaser.Math.Between(finalBurst ? 44 : 30, finalBurst ? 92 : 64);
+      const color = Phaser.Utils.Array.GetRandom(colors);
+      const shard = this.add.image(
+        worldX + Phaser.Math.Between(-10, 10),
+        worldY + Phaser.Math.Between(-10, 10),
+        "ship-debris",
+        Phaser.Math.Between(0, 15),
+      );
+      shard.setDepth(80);
+      const baseShardScale = width / DEBRIS_FRAME_SIZE;
+      shard.setScale(baseShardScale * Phaser.Math.FloatBetween(0.82, 1.18));
+      shard.setTint(color);
+      shard.setRotation(boss.rotation + Phaser.Math.FloatBetween(-0.7, 0.7));
+      this.bossDebris.push(shard);
+
+      const launchAngle = outwardAngle + Phaser.Math.FloatBetween(-0.74, 0.74);
+      const distance = Phaser.Math.Between(finalBurst ? 150 : 110, finalBurst ? 300 : 230);
+      this.tweens.add({
+        targets: shard,
+        x: shard.x + Math.cos(launchAngle) * distance,
+        y: shard.y + Math.sin(launchAngle) * distance * 0.2 + Phaser.Math.Between(240, finalBurst ? 420 : 340),
+        rotation: shard.rotation + Phaser.Math.FloatBetween(-8.8, 8.8),
+        scale: shard.scaleX * Phaser.Math.FloatBetween(0.5, 0.72),
+        duration: Phaser.Math.Between(finalBurst ? 1900 : 1500, finalBurst ? 2700 : 2300),
+        ease: "Cubic.easeOut",
+      });
+      this.fadeBossDebris(shard, finalBurst ? 2500 : 2200, finalBurst ? 1160 : 920);
+    }
+  }
+
+  fadeBossDebris(piece, delay, duration) {
+    this.time.delayedCall(delay, () => {
+      if (!piece.active) return;
+      this.tweens.add({
+        targets: piece,
+        alpha: 0,
+        duration,
+        ease: "Sine.easeOut",
+        onComplete: () => {
+          Phaser.Utils.Array.Remove(this.bossDebris, piece);
+          piece.destroy();
+        },
+      });
+    });
   }
 
   syncBossDamageMarks(boss) {
@@ -1239,8 +1704,16 @@ class SpaceBlasterScene extends Phaser.Scene {
   }
 
   clearBossDamageMarks() {
-    this.bossDamageMarks.forEach(({ mark }) => mark.destroy());
+    this.bossDamageMarks.forEach(({ mark, smoke }) => {
+      smoke?.destroy();
+      mark.destroy();
+    });
     this.bossDamageMarks = [];
+  }
+
+  clearBossDebris() {
+    this.bossDebris.forEach((piece) => piece.destroy());
+    this.bossDebris = [];
   }
 
   defeatBoss(boss) {
@@ -1252,6 +1725,7 @@ class SpaceBlasterScene extends Phaser.Scene {
     this.enemyBullets.clear(true, true);
     this.score += boss.getData("config").score;
     this.updateHud();
+    boss.body.enable = false;
 
     const blastPoints = [
       { x: 0, y: 0, scale: 1.12 },
@@ -1260,18 +1734,35 @@ class SpaceBlasterScene extends Phaser.Scene {
       { x: -64, y: 82, scale: 0.72 },
       { x: 72, y: 76, scale: 0.72 },
     ];
+    const bossConfig = boss.getData("config");
+
+    this.createBossExplosionSequence(boss);
+
+    bossConfig.damageSpots.forEach((spot, index) => {
+      this.time.delayedCall(index * 95, () => {
+        if (boss.active) this.spawnBossBreakoff(boss, spot, index + 1, true);
+      });
+    });
 
     blastPoints.forEach((point, index) => {
-      this.time.delayedCall(index * 130, () => {
+      this.time.delayedCall(520 + index * 170, () => {
         if (!boss.active && index > 0) return;
-        this.createExplosion(boss.x + point.x, boss.y + point.y, point.scale);
+        this.createExplosion(boss.x + point.x, boss.y + point.y, point.scale * 0.72);
       });
     });
 
     this.cameras.main.flash(260, 255, 232, 180, false);
-    this.cameras.main.shake(860, 0.016);
+    this.cameras.main.shake(1420, 0.018);
+    this.tweens.add({
+      targets: boss,
+      alpha: 0,
+      scale: boss.scaleX * 1.04,
+      duration: 1250,
+      delay: 520,
+      ease: "Sine.easeOut",
+    });
 
-    this.time.delayedCall(680, () => {
+    this.time.delayedCall(2300, () => {
       this.clearBossDamageMarks();
       boss.destroy();
       this.hideBossHud();
@@ -1279,7 +1770,44 @@ class SpaceBlasterScene extends Phaser.Scene {
       this.showBossDownBanner();
     });
 
-    this.time.delayedCall(1780, () => this.advanceLevel(420));
+    this.time.delayedCall(3400, () => this.advanceLevel(420));
+  }
+
+  createBossExplosionSequence(boss) {
+    const config = boss.getData("config");
+    const blast = this.add.sprite(boss.x, boss.y, config.deathSheet, 0);
+    blast.setDepth(70);
+    blast.setScale((config.displayWidth * 1.12) / BOSS_FRAME_SIZE);
+    blast.play(this.getBossDeathAnimationKey(config));
+    blast.once("animationcomplete", () => blast.destroy());
+
+    const shockwave = this.add.circle(boss.x, boss.y, 40, 0x7df4ff, 0);
+    shockwave.setDepth(68);
+    shockwave.setStrokeStyle(6, config.damageTint, 0.86);
+    this.tweens.add({
+      targets: shockwave,
+      radius: Phaser.Math.Clamp(config.displayWidth * 0.72, 260, 520),
+      alpha: 0,
+      duration: 1700,
+      ease: "Cubic.easeOut",
+      onComplete: () => shockwave.destroy(),
+    });
+
+    this.spawnShipDebris(boss.x, boss.y, 18, config.displayWidth / 260);
+    this.time.delayedCall(620, () => this.spawnShipDebris(boss.x, boss.y, 22, config.displayWidth / 230));
+
+    const embers = this.add.particles(boss.x, boss.y, "spark", {
+      lifespan: { min: 1000, max: 2200 },
+      speed: { min: 150, max: 620 },
+      scale: { start: 0.7, end: 0 },
+      alpha: { start: 0.95, end: 0 },
+      tint: [config.damageTint, 0xffd166, 0xff5b38, 0x7df4ff],
+      blendMode: "ADD",
+      emitting: false,
+    });
+    embers.explode(130);
+    this.time.delayedCall(2450, () => embers.destroy());
+    this.sfx.shipExplosion();
   }
 
   showBossDownBanner() {
