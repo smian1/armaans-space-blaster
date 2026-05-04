@@ -9,7 +9,11 @@ const ASSETS = {
   player: "/assets/player-ship.png",
   asteroid: "/assets/asteroid-large.png",
   enemy: "/assets/enemy-ufo.png",
+  enemyRaider: "/assets/enemy-raider.png",
+  enemyAlien: "/assets/enemy-alien.png",
+  enemyCruiser: "/assets/enemy-cruiser.png",
   laser: "/assets/laser-bolt.png",
+  enemyProjectiles: "/assets/enemy-projectiles.png",
   explosion: "/assets/explosion-sheet.png",
   shipExplosion: "/assets/ship-explosion-sheet.png",
   powerups: "/assets/powerups-sheet.png",
@@ -25,6 +29,61 @@ const POWERUPS = [
 const POWERUP_SIZE = 46;
 const POWERUP_PICKUP_RADIUS = 58;
 const POWERUP_MAGNET_RADIUS = 132;
+
+const ENEMY_TYPES = [
+  {
+    key: "ufo",
+    texture: "enemy-ufo",
+    unlockLevel: 1,
+    display: 112,
+    hp: 3,
+    score: 220,
+    speed: 78,
+    weapon: "orb",
+    shotDelay: [1050, 1650],
+    movement: "sine",
+    weight: 4,
+  },
+  {
+    key: "raider",
+    texture: "enemy-raider",
+    unlockLevel: 1,
+    display: 104,
+    hp: 2,
+    score: 185,
+    speed: 124,
+    weapon: "shard",
+    shotDelay: [760, 1250],
+    movement: "zigzag",
+    weight: 4,
+  },
+  {
+    key: "alien",
+    texture: "enemy-alien",
+    unlockLevel: 1,
+    display: 96,
+    hp: 2,
+    score: 170,
+    speed: 92,
+    weapon: "spray",
+    shotDelay: [1050, 1550],
+    movement: "drift",
+    weight: 3,
+  },
+  {
+    key: "cruiser",
+    texture: "enemy-cruiser",
+    unlockLevel: 2,
+    display: 172,
+    hp: 8,
+    score: 520,
+    speed: 54,
+    weapon: "heavy",
+    shotDelay: [900, 1400],
+    movement: "cruiser",
+    weight: 2,
+  },
+];
 
 class SoundFX {
   constructor() {
@@ -139,7 +198,11 @@ class SpaceBlasterScene extends Phaser.Scene {
     this.load.image("player-ship", ASSETS.player);
     this.load.image("asteroid-large", ASSETS.asteroid);
     this.load.image("enemy-ufo", ASSETS.enemy);
+    this.load.image("enemy-raider", ASSETS.enemyRaider);
+    this.load.image("enemy-alien", ASSETS.enemyAlien);
+    this.load.image("enemy-cruiser", ASSETS.enemyCruiser);
     this.load.image("laser-bolt", ASSETS.laser);
+    this.load.spritesheet("enemy-projectiles", ASSETS.enemyProjectiles, { frameWidth: 256, frameHeight: 256 });
     this.load.spritesheet("explosion", ASSETS.explosion, { frameWidth: 256, frameHeight: 256 });
     this.load.spritesheet("ship-explosion", ASSETS.shipExplosion, { frameWidth: 256, frameHeight: 256 });
     this.load.spritesheet("powerups", ASSETS.powerups, { frameWidth: 256, frameHeight: 256 });
@@ -156,6 +219,7 @@ class SpaceBlasterScene extends Phaser.Scene {
     this.shieldUntil = 0;
     this.rapidUntil = 0;
     this.doubleUntil = 0;
+    this.shotCounter = 0;
     this.waveRemaining = 0;
     this.enemyRemaining = 0;
     this.levelTransitioning = false;
@@ -360,7 +424,7 @@ class SpaceBlasterScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     const body = this.add
-      .text(0, 30, "WASD / Arrows to fly\nSpace / click / touch to fire\nBreak asteroids, dodge UFOs, grab powerups", {
+      .text(0, 30, "WASD / Arrows to fly\nSpace / click / touch to fire\nBreak asteroids, dodge aliens, grab powerups", {
         fontFamily: "Inter, system-ui, sans-serif",
         fontSize: "18px",
         fontStyle: "700",
@@ -407,7 +471,7 @@ class SpaceBlasterScene extends Phaser.Scene {
   startLevel() {
     this.levelTransitioning = true;
     this.waveRemaining = 10 + this.level * 5;
-    this.enemyRemaining = Math.max(1, Math.floor((this.level + 2) / 2));
+    this.enemyRemaining = 2 + Math.floor(this.level * 1.25);
     this.updateHud();
 
     const banner = this.add
@@ -447,7 +511,8 @@ class SpaceBlasterScene extends Phaser.Scene {
       repeat: this.waveRemaining - 1,
       callback: () => {
         if (this.gameOver || !this.gameStarted) return;
-        this.spawnAsteroid("large");
+        const asteroidSize = this.level >= 2 && Phaser.Math.Between(0, 100) < 24 ? "giant" : "large";
+        this.spawnAsteroid(asteroidSize);
         this.waveRemaining -= 1;
       },
     });
@@ -470,6 +535,7 @@ class SpaceBlasterScene extends Phaser.Scene {
 
   spawnAsteroid(sizeKey, x = Phaser.Math.Between(42, GAME_WIDTH - 42), y = -80, velocityOverride = null) {
     const sizes = {
+      giant: { display: Phaser.Math.Between(148, 188), hp: 5, score: 130, next: "large" },
       large: { display: Phaser.Math.Between(92, 124), hp: 3, score: 80, next: "medium" },
       medium: { display: Phaser.Math.Between(60, 82), hp: 2, score: 45, next: "small" },
       small: { display: Phaser.Math.Between(34, 50), hp: 1, score: 25, next: null },
@@ -493,17 +559,29 @@ class SpaceBlasterScene extends Phaser.Scene {
     return asteroid;
   }
 
-  spawnEnemy() {
-    const enemy = this.enemies.create(Phaser.Math.Between(74, GAME_WIDTH - 74), -90, "enemy-ufo");
+  chooseEnemyType() {
+    const available = ENEMY_TYPES.filter((type) => this.level >= type.unlockLevel);
+    const weighted = available.flatMap((type) => Array(type.weight).fill(type));
+    return Phaser.Utils.Array.GetRandom(weighted);
+  }
+
+  spawnEnemy(type = this.chooseEnemyType()) {
+    const margin = Math.max(74, type.display / 2 + 18);
+    const enemy = this.enemies.create(Phaser.Math.Between(margin, GAME_WIDTH - margin), -type.display, type.texture);
     enemy.setDepth(18);
-    enemy.setScale(112 / enemy.width);
-    enemy.setData("hp", 3 + Math.floor(this.level / 2));
+    enemy.setScale(type.display / Math.max(enemy.width, enemy.height));
+    enemy.setData("type", type.key);
+    enemy.setData("weapon", type.weapon);
+    enemy.setData("movement", type.movement);
+    enemy.setData("hp", type.hp + Math.floor(this.level / 2));
+    enemy.setData("score", type.score + this.level * 18);
     enemy.setData("baseX", enemy.x);
     enemy.setData("phase", Phaser.Math.FloatBetween(0, Math.PI * 2));
-    enemy.setData("nextShot", this.time.now + Phaser.Math.Between(850, 1400));
+    enemy.setData("shotDelay", type.shotDelay);
+    enemy.setData("nextShot", this.time.now + Phaser.Math.Between(type.shotDelay[0], type.shotDelay[1]));
     const radius = Math.min(enemy.width, enemy.height) * 0.34;
     enemy.body.setCircle(radius, (enemy.width - radius * 2) / 2, (enemy.height - radius * 2) / 2);
-    enemy.body.setVelocityY(70 + this.level * 5);
+    enemy.body.setVelocityY(type.speed + this.level * 4);
   }
 
   update(time, delta) {
@@ -590,24 +668,30 @@ class SpaceBlasterScene extends Phaser.Scene {
     const fireDelay = time < this.rapidUntil ? 92 : 170;
     if (time < this.nextShotAt) return;
     this.nextShotAt = time + fireDelay;
+    this.shotCounter += 1;
+    const heavyShot = time < this.rapidUntil && this.shotCounter % 4 === 0;
 
     if (time < this.doubleUntil) {
-      this.spawnPlayerBullet(this.player.x - 22, this.player.y - 42, -36);
-      this.spawnPlayerBullet(this.player.x + 22, this.player.y - 42, 36);
+      this.spawnPlayerBullet(this.player.x - 25, this.player.y - 42, -40, heavyShot ? 72 : 58, heavyShot ? 2 : 1);
+      this.spawnPlayerBullet(this.player.x + 25, this.player.y - 42, 40, heavyShot ? 72 : 58, heavyShot ? 2 : 1);
     } else {
-      this.spawnPlayerBullet(this.player.x, this.player.y - 50, 0);
+      this.spawnPlayerBullet(this.player.x, this.player.y - 50, 0, heavyShot ? 84 : 58, heavyShot ? 2 : 1);
     }
 
     this.sfx.shoot();
   }
 
-  spawnPlayerBullet(x, y, vx) {
+  spawnPlayerBullet(x, y, vx, displayHeight = 58, damage = 1) {
     const bullet = this.bullets.create(x, y, "laser-bolt");
     bullet.setDepth(16);
-    bullet.setScale(58 / bullet.height);
+    bullet.setScale(displayHeight / bullet.height);
+    bullet.setData("damage", damage);
     bullet.body.setSize(bullet.width * 0.52, bullet.height * 0.82, true);
     bullet.body.setVelocity(vx, -690);
     bullet.setBlendMode(Phaser.BlendModes.ADD);
+    if (damage > 1) {
+      bullet.setTint(0xb6f7ff);
+    }
   }
 
   updateEnemies(time) {
@@ -616,29 +700,82 @@ class SpaceBlasterScene extends Phaser.Scene {
 
       const phase = enemy.getData("phase");
       const baseX = enemy.getData("baseX");
-      enemy.x = Phaser.Math.Clamp(baseX + Math.sin(time / 520 + phase) * 74, 42, GAME_WIDTH - 42);
+      const movement = enemy.getData("movement");
+      const horizontalRanges = {
+        sine: 74,
+        zigzag: 118,
+        drift: 52,
+        cruiser: 92,
+      };
+      const horizontalSpeeds = {
+        sine: 520,
+        zigzag: 310,
+        drift: 780,
+        cruiser: 980,
+      };
+      enemy.x = Phaser.Math.Clamp(
+        baseX + Math.sin(time / horizontalSpeeds[movement] + phase) * horizontalRanges[movement],
+        42,
+        GAME_WIDTH - 42,
+      );
+
+      if (movement === "zigzag") {
+        enemy.setAngle(Math.sin(time / 180 + phase) * 8);
+      } else if (movement === "drift") {
+        enemy.setAngle(Math.sin(time / 480 + phase) * 5);
+      }
 
       if (time > enemy.getData("nextShot") && enemy.y > 70) {
         this.fireEnemyBullet(enemy);
-        enemy.setData("nextShot", time + Phaser.Math.Between(1120, 1700) - this.level * 28);
+        const delay = enemy.getData("shotDelay");
+        enemy.setData("nextShot", time + Phaser.Math.Between(delay[0], delay[1]) - this.level * 24);
       }
     });
   }
 
   fireEnemyBullet(enemy) {
-    const bullet = this.enemyBullets.create(enemy.x, enemy.y + 38, "spark");
-    bullet.setDepth(15);
-    bullet.setDisplaySize(18, 18);
-    bullet.body.setCircle(7, 1, 1);
-    bullet.body.setVelocity(Phaser.Math.Between(-22, 22), 245 + this.level * 8);
-    bullet.setTint(0xff4a38);
-    bullet.setBlendMode(Phaser.BlendModes.ADD);
+    const weapon = enemy.getData("weapon");
+    const speed = 245 + this.level * 10;
+
+    if (weapon === "shard") {
+      this.spawnEnemyProjectile(enemy.x, enemy.y + 40, 1, 0, speed + 70, 34);
+    } else if (weapon === "spray") {
+      [-95, 0, 95].forEach((vx) => this.spawnEnemyProjectile(enemy.x, enemy.y + 36, 3, vx, speed, 31));
+    } else if (weapon === "heavy") {
+      this.spawnEnemyProjectile(enemy.x - 48, enemy.y + 62, 0, -45, speed + 5, 30);
+      this.spawnEnemyProjectile(enemy.x + 48, enemy.y + 62, 0, 45, speed + 5, 30);
+      this.time.delayedCall(160, () => {
+        if (enemy.active) {
+          this.spawnEnemyProjectile(enemy.x, enemy.y + 72, 2, 0, speed + 92, 46);
+        }
+      });
+    } else {
+      this.spawnEnemyProjectile(enemy.x, enemy.y + 38, 0, Phaser.Math.Between(-28, 28), speed, 30);
+    }
+
     this.sfx.enemyShoot();
   }
 
+  spawnEnemyProjectile(x, y, frame, vx, vy, displaySize) {
+    const bullet = this.enemyBullets.create(x, y, "enemy-projectiles", frame);
+    bullet.setDepth(15);
+    bullet.setScale(displaySize / bullet.width);
+    const radius = bullet.width * 0.36;
+    bullet.body.setCircle(radius, (bullet.width - radius * 2) / 2, (bullet.height - radius * 2) / 2);
+    bullet.body.setVelocity(vx, vy);
+    bullet.setBlendMode(Phaser.BlendModes.ADD);
+
+    if (frame === 1 || frame === 2) {
+      const angle = Phaser.Math.Angle.Between(0, 0, vx, vy);
+      bullet.setAngle(Phaser.Math.RadToDeg(angle - Math.PI / 2));
+    }
+    return bullet;
+  }
+
   bulletHitsAsteroid(bullet, asteroid) {
+    const damage = bullet.getData("damage") || 1;
     bullet.destroy();
-    this.damageAsteroid(asteroid, 1);
+    this.damageAsteroid(asteroid, damage);
   }
 
   damageAsteroid(asteroid, amount) {
@@ -675,8 +812,9 @@ class SpaceBlasterScene extends Phaser.Scene {
   }
 
   bulletHitsEnemy(bullet, enemy) {
+    const damage = bullet.getData("damage") || 1;
     bullet.destroy();
-    const hp = enemy.getData("hp") - 1;
+    const hp = enemy.getData("hp") - damage;
     enemy.setData("hp", hp);
     this.flashSprite(enemy, 0xffffff);
 
@@ -685,8 +823,8 @@ class SpaceBlasterScene extends Phaser.Scene {
       return;
     }
 
-    this.score += 220 + this.level * 18;
-    this.createExplosion(enemy.x, enemy.y, 0.78);
+    this.score += enemy.getData("score");
+    this.createExplosion(enemy.x, enemy.y, enemy.getData("type") === "cruiser" ? 1.08 : 0.78);
     if (Phaser.Math.Between(0, 100) < 36) {
       this.spawnPowerup(enemy.x, enemy.y);
     }
@@ -850,7 +988,7 @@ class SpaceBlasterScene extends Phaser.Scene {
       if (bullet?.active && bullet.y < killAbove) bullet.destroy();
     });
     this.enemyBullets.children.iterate((bullet) => {
-      if (bullet?.active && bullet.y > killBelow) bullet.destroy();
+      if (bullet?.active && (bullet.y > killBelow || bullet.x < -140 || bullet.x > GAME_WIDTH + 140)) bullet.destroy();
     });
     this.powerups.children.iterate((powerup) => {
       if (powerup?.active && powerup.y > killBelow) powerup.destroy();

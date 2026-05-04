@@ -8,9 +8,11 @@ A Phaser arcade space shooter with generated sprite art, asteroids, UFO enemies,
 
 - Wide desktop arcade playfield built with Phaser
 - Generated spaceship, asteroid, UFO, laser, powerup, and space background art
+- New enemy variations: red raiders, organic aliens, large cruisers, and classic UFOs
+- Multiple enemy weapon styles: plasma orbs, shards, missiles, and alien energy globs
 - Big slow-motion spaceship death explosion with debris, shockwave, flash, and screen shake
 - Asteroid waves that break into smaller rocks
-- UFO enemies with enemy fire
+- Giant asteroids and larger cruiser enemies appear as levels climb
 - Shield, rapid-fire, double-shot, and repair powerups
 - Score, lives, level progression, pause, game-over, and restart flow
 
@@ -19,6 +21,12 @@ A Phaser arcade space shooter with generated sprite art, asteroids, UFO enemies,
 | Player Ship | Asteroid | Enemy UFO | Laser |
 | --- | --- | --- | --- |
 | <img src="public/assets/player-ship.png" width="180" alt="Player ship sprite"> | <img src="public/assets/asteroid-large.png" width="180" alt="Asteroid sprite"> | <img src="public/assets/enemy-ufo.png" width="180" alt="Enemy UFO sprite"> | <img src="public/assets/laser-bolt.png" width="90" alt="Laser bolt sprite"> |
+
+## Enemy Variations
+
+| Raider | Organic Alien | Cruiser | Enemy Weapons |
+| --- | --- | --- | --- |
+| <img src="public/assets/enemy-raider.png" width="180" alt="Red raider enemy sprite"> | <img src="public/assets/enemy-alien.png" width="180" alt="Organic alien enemy sprite"> | <img src="public/assets/enemy-cruiser.png" width="220" alt="Large cruiser enemy sprite"> | <img src="public/assets/enemy-projectiles.png" width="180" alt="Enemy projectile sprite sheet"> |
 
 | Powerups | Asteroid Explosion | Ship Death Explosion |
 | --- | --- | --- |
