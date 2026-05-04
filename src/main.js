@@ -300,7 +300,7 @@ class SpaceBlasterScene extends Phaser.Scene {
     this.anims.create({
       key: "ship-boom",
       frames: this.anims.generateFrameNumbers("ship-explosion", { start: 0, end: 15 }),
-      frameRate: 20,
+      frameRate: 8,
       hideOnComplete: true,
     });
   }
@@ -799,25 +799,27 @@ class SpaceBlasterScene extends Phaser.Scene {
   }
 
   createShipExplosion(x, y) {
-    const blast = this.add.sprite(x, y, "ship-explosion");
+    const blastX = Phaser.Math.Clamp(x, 190, GAME_WIDTH - 190);
+    const blastY = Phaser.Math.Clamp(y - 54, 170, GAME_HEIGHT - 190);
+    const blast = this.add.sprite(blastX, blastY, "ship-explosion");
     blast.setDepth(60);
     blast.setScale(1.45);
     blast.play("ship-boom");
 
-    const shockwave = this.add.circle(x, y, 24, 0x7df4ff, 0);
+    const shockwave = this.add.circle(blastX, blastY, 24, 0x7df4ff, 0);
     shockwave.setDepth(58);
     shockwave.setStrokeStyle(5, 0x7df4ff, 0.92);
     this.tweens.add({
       targets: shockwave,
       radius: 230,
       alpha: 0,
-      duration: 620,
+      duration: 1050,
       ease: "Cubic.easeOut",
       onComplete: () => shockwave.destroy(),
     });
 
-    const debris = this.add.particles(x, y, "spark", {
-      lifespan: { min: 520, max: 1100 },
+    const debris = this.add.particles(blastX, blastY, "spark", {
+      lifespan: { min: 850, max: 1650 },
       speed: { min: 150, max: 480 },
       scale: { start: 0.62, end: 0 },
       alpha: { start: 1, end: 0 },
@@ -826,10 +828,10 @@ class SpaceBlasterScene extends Phaser.Scene {
       emitting: false,
     });
     debris.explode(92);
-    this.time.delayedCall(1300, () => debris.destroy());
+    this.time.delayedCall(1900, () => debris.destroy());
 
-    this.cameras.main.flash(180, 255, 236, 176, false);
-    this.cameras.main.shake(520, 0.018);
+    this.cameras.main.flash(260, 255, 236, 176, false);
+    this.cameras.main.shake(760, 0.014);
     this.sfx.shipExplosion();
   }
 
@@ -889,7 +891,7 @@ class SpaceBlasterScene extends Phaser.Scene {
     this.player.setVisible(false);
     this.sfx.gameOver();
 
-    this.time.delayedCall(780, () => this.showGameOverOverlay());
+    this.time.delayedCall(1900, () => this.showGameOverOverlay());
   }
 
   showGameOverOverlay() {
