@@ -425,6 +425,8 @@ class SpaceBlasterScene extends Phaser.Scene {
     this.shieldUntil = 0;
     this.rapidUntil = 0;
     this.doubleUntil = 0;
+    this.pointerShootQueued = false;
+    this.pointerSteeringActive = false;
     this.shotCounter = 0;
     this.waveRemaining = 0;
     this.enemyRemaining = 0;
@@ -683,12 +685,38 @@ class SpaceBlasterScene extends Phaser.Scene {
       pause: Phaser.Input.Keyboard.KeyCodes.P,
     });
 
+    this.input.keyboard.addCapture([
+      Phaser.Input.Keyboard.KeyCodes.UP,
+      Phaser.Input.Keyboard.KeyCodes.LEFT,
+      Phaser.Input.Keyboard.KeyCodes.DOWN,
+      Phaser.Input.Keyboard.KeyCodes.RIGHT,
+      Phaser.Input.Keyboard.KeyCodes.W,
+      Phaser.Input.Keyboard.KeyCodes.A,
+      Phaser.Input.Keyboard.KeyCodes.S,
+      Phaser.Input.Keyboard.KeyCodes.D,
+      Phaser.Input.Keyboard.KeyCodes.SPACE,
+      Phaser.Input.Keyboard.KeyCodes.P,
+      Phaser.Input.Keyboard.KeyCodes.R,
+    ]);
+
     this.input.keyboard.on("keydown", () => this.sfx.unlock());
     this.input.on("pointerdown", () => {
       this.sfx.unlock();
       if (!this.gameStarted || this.gameOver) {
         this.startGame();
+        return;
       }
+
+      this.pointerSteeringActive = true;
+      this.pointerShootQueued = true;
+    });
+
+    this.input.on("pointerup", () => {
+      this.pointerSteeringActive = false;
+    });
+
+    this.input.on("pointerout", () => {
+      this.pointerSteeringActive = false;
     });
 
     this.input.keyboard.on("keydown-SPACE", () => {
@@ -726,7 +754,7 @@ class SpaceBlasterScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     const body = this.add
-      .text(0, 30, "WASD / Arrows to fly\nSpace / click / touch to fire\nBreak asteroids, dodge aliens, defeat bosses", {
+      .text(0, 30, "WASD / Arrows to fly\nHold Space to fire\nTap shoots once; drag steers", {
         fontFamily: "Inter, system-ui, sans-serif",
         fontSize: "18px",
         fontStyle: "700",
@@ -766,6 +794,8 @@ class SpaceBlasterScene extends Phaser.Scene {
     if (this.gameStarted) return;
 
     this.gameStarted = true;
+    this.pointerSteeringActive = false;
+    this.pointerShootQueued = false;
     this.overlay.destroy();
     this.startLevel();
   }
@@ -967,11 +997,14 @@ class SpaceBlasterScene extends Phaser.Scene {
     const down = this.cursors.down.isDown || this.keys.down.isDown;
     let vx = (right ? 1 : 0) - (left ? 1 : 0);
     let vy = (down ? 1 : 0) - (up ? 1 : 0);
+    const usingKeyboard = vx !== 0 || vy !== 0;
 
-    if (this.input.activePointer.isDown && this.input.activePointer.y > 90) {
+    if (!usingKeyboard && this.pointerSteeringActive && this.input.activePointer.isDown && this.input.activePointer.y > 90) {
       const pointer = this.input.activePointer;
-      const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, pointer.x, pointer.y);
-      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, pointer.x, pointer.y);
+      const pointerX = Number.isFinite(pointer.worldX) ? pointer.worldX : pointer.x;
+      const pointerY = Number.isFinite(pointer.worldY) ? pointer.worldY : pointer.y;
+      const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, pointerX, pointerY);
+      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, pointerX, pointerY);
       if (distance > 18) {
         vx += Math.cos(angle);
         vy += Math.sin(angle);
@@ -991,7 +1024,12 @@ class SpaceBlasterScene extends Phaser.Scene {
   }
 
   handlePlayerShooting(time) {
-    if (this.keys.shoot.isDown || this.input.activePointer.isDown) {
+    if (this.keys.shoot.isDown) {
+      this.firePlayerLaser(time);
+    }
+
+    if (this.pointerShootQueued) {
+      this.pointerShootQueued = false;
       this.firePlayerLaser(time);
     }
   }
