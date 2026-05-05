@@ -1,0 +1,74 @@
+@media (max-width: 680px) {
+  .board-zone {
+    order: -3;
+  }
+
+  .right-panel {
+    order: -2;
+    gap: 10px;
+  }
+
+  .left-panel {
+    order: -1;
+  }
+
+  .right-panel .keys-card {
+    order: -3;
+    padding: 12px;
+  }
+
+  .right-panel .tip-card {
+    display: none;
+  }
+
+  .right-panel .control-stack {
+    order: -2;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .right-panel .control-button {
+    min-height: 48px;
+    padding: 8px 6px;
+    border-width: 3px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    gap: 5px;
+  }
+
+  .right-panel .control-button svg {
+    width: 1.15em;
+    height: 1.15em;
+  }
+
+  .right-panel .arrow-pad {
+    grid-template-columns: repeat(3, 48px);
+    grid-template-rows: repeat(2, 48px);
+    gap: 7px;
+  }
+
+  .right-panel .arrow {
+    border-radius: 10px;
+  }
+
+  .right-panel .keys-card strong {
+    font-size: 0.9rem;
+  }
+
+  .mode-card {
+    padding: 14px;
+  }
+
+  .switch {
+    height: 50px;
+  }
+
+  .switch span {
+    width: 34px;
+    height: 34px;
+  }
+
+  .switch.on span {
+    transform: translate(74px);
+  }
+}
